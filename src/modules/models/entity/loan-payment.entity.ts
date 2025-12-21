@@ -17,6 +17,9 @@ export class LoanPaymentEntity extends BaseEntity {
   @Column({ name: "PAYMENT_MODE", type: "varchar", length: 20, default: null })
   paymentMode: string;
 
+  @Column({ name: "RECEIVER_NAME", type: "varchar", length: 30, default: null })
+  receiverName: string;
+
   @CreateDateColumn({
     name: "PAYMENT_DATE",
     type: "date",

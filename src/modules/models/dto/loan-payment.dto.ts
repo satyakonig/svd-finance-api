@@ -8,6 +8,7 @@ export class LoanPaymentDto extends BaseDto {
   paymentMode: string;
   paymentDate: Date;
   loan: LoanDto;
+  receiverName: string;
   agentLocation: AgentLocationDto;
 
   public static fromEntity(

@@ -11,6 +11,7 @@ import { LocationEntity } from "../../models/entity/location.entity";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
 import { error } from "console";
+import { ChitTransactionEntity } from "../../models/entity/chit.transaction.entity";
 
 @Injectable()
 export class LoanService {
@@ -26,7 +27,9 @@ export class LoanService {
     @InjectRepository(BFEntity)
     private bfRepo: Repository<BFEntity>,
     @InjectRepository(FineEntity)
-    private fineRepo: Repository<FineEntity>
+    private fineRepo: Repository<FineEntity>,
+    @InjectRepository(ChitTransactionEntity)
+    private chitTranRepo: Repository<ChitTransactionEntity>
   ) {}
 
   async getLoanList(
@@ -234,6 +237,18 @@ export class LoanService {
           .andWhere("fine.status = :status", { status: "ACTIVE" })
           .getMany();
 
+        const chitTrans = await this.chitTranRepo
+          .createQueryBuilder("chitTran")
+          .leftJoinAndSelect("chitTran.agentLocation", "agentLocation")
+          .leftJoinAndSelect("agentLocation.agent", "agent")
+          .leftJoinAndSelect("agentLocation.location", "location")
+          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .where("location.id = :locationId", { locationId })
+          .andWhere("chitTran.status = :status", { status: "ACTIVE" })
+          .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
+          .andWhere(date ? "chitTran.date = :date" : "1=1", { date })
+          .getMany();
+
         return {
           id: locationId,
           name: locationName,
@@ -242,6 +257,7 @@ export class LoanService {
           spent,
           fines,
           bf,
+          chitTrans,
         };
       })
     );
