@@ -6,6 +6,7 @@ import { DataSource, ILike, Repository } from "typeorm";
 import { AreaEntity } from "../../models/entity/area.entity";
 import { LoanDurationEntity } from "../../models/entity/loanDuration.entity";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
+import { reponseGenerator } from "../../../util/common";
 
 @Injectable()
 export class LocationService {
@@ -21,9 +22,23 @@ export class LocationService {
     private readonly dataSource: DataSource
   ) {}
 
-  async getLocationList(name: string, status: string) {
-    let locationList: LocationEntity[];
+  async getLocation(id: number) {
+    let location: LocationEntity;
     try {
+      location = await this.locationRepo.findOne({
+        where: {
+          id: id ?? undefined,
+        },
+      });
+      return location;
+    } catch (err) {
+      throw new Error(`Failed to get location ${err.message}`);
+    }
+  }
+
+  async getLocationList(name: string, status: string) {
+    try {
+      let locationList: LocationEntity[];
       locationList = await this.locationRepo.find({
         where: {
           name: name ? ILike(`%${name}%`) : undefined,
@@ -33,31 +48,48 @@ export class LocationService {
           name: "ASC",
         },
       });
+      return locationList;
     } catch (err) {
-      throw new Error("Failed to get location list");
+      throw new Error(`Failed to get locations ${err.message}`);
     }
-    return locationList;
   }
 
   public async saveOrUpdateLocation(location: LocationDto) {
     try {
-      const findLocation = await this.locationRepo
+      const existingLocation = await this.locationRepo
         .createQueryBuilder("location")
         .where("LOWER(location.name) = LOWER(:name)", {
           name: location?.name ?? "",
         })
         .getOne();
 
-      if (findLocation && !location?.id) {
-        return { info: "Location already exists" };
-      }
-      await this.locationRepo.save(location);
+      let {
+        id: existingLocationId,
+        createdOn,
+        ...existingLocationWithoutId
+      } = existingLocation ?? {};
+      let { id: locationId, ...locationWithoutId } = location;
 
-      return location?.id
-        ? { message: "Location Updated Successfully" }
-        : { message: "Location Saved SucessFully" };
+      let isExisting =
+        JSON.stringify(existingLocationWithoutId) ===
+        JSON.stringify(locationWithoutId);
+      if (isExisting) {
+        return { infoMessage: "Location already exists" };
+      }
+      let saveOrUpdatedLocation = await this.locationRepo.save(
+        LocationDto.toEntity(location)
+      );
+
+      return {
+        successMessage: reponseGenerator(
+          "Location",
+          location?.id,
+          location?.status
+        ),
+        result: saveOrUpdatedLocation,
+      };
     } catch (error) {
-      throw new Error("Failed to update location");
+      throw new Error(`Failed to save location ${error.message}`);
     }
   }
 
@@ -108,16 +140,24 @@ export class LocationService {
 
       location.status = location.status;
 
-      let savedLocation = await queryRunner.manager.save(
+      let restoredLocation = await queryRunner.manager.save(
         LocationEntity,
         location
       );
 
       await queryRunner.commitTransaction();
-      return savedLocation;
+
+      return {
+        successMessage: reponseGenerator(
+          "Location",
+          location?.id,
+          location?.status
+        ),
+        result: restoredLocation,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new Error(`Transaction Failed: ${error.message}`);
+      throw new Error(`Failed to update location ${error.message}`);
     } finally {
       await queryRunner.release();
     }

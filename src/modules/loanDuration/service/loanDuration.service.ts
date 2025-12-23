@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { LoanDurationEntity } from "../../models/entity/loanDuration.entity";
 import { LoanDurationDto } from "../../models/dto/loanDuration.dto";
+import { reponseGenerator } from "../../../util/common";
 
 @Injectable()
 export class LoanDurationService {
@@ -10,6 +11,21 @@ export class LoanDurationService {
     @InjectRepository(LoanDurationEntity)
     private loanDurationRepo: Repository<LoanDurationEntity>
   ) {}
+
+  async getLoanDuration(id: number) {
+    let loanDuration: LoanDurationEntity;
+    try {
+      loanDuration = await this.loanDurationRepo.findOne({
+        where: {
+          id: id ?? undefined,
+        },
+        relations: ["location"],
+      });
+    } catch (err) {
+      throw new Error(`Failed to get loan duration ${err.message}`);
+    }
+    return loanDuration;
+  }
 
   async getLoanDurationList(locationId: number, status: string) {
     let loanDurationList: LoanDurationEntity[];
@@ -25,24 +41,52 @@ export class LoanDurationService {
         relations: ["location"],
       });
     } catch (err) {
-      throw new Error("Failed to get loan duration list");
+      throw new Error(`Failed to get loan durations ${err.message}`);
     }
     return loanDurationList;
   }
 
-  public async saveOrUpdateLoanDuration(
-    loanDuration: LoanDurationDto
-  ): Promise<LoanDurationEntity> {
-    let savedLoanDuration: LoanDurationEntity;
-
+  public async saveOrUpdateLoanDuration(loanDuration: LoanDurationDto) {
     try {
-      savedLoanDuration = await this.loanDurationRepo.save(
+      let existingLoanDuration = await this.loanDurationRepo.findOne({
+        where: {
+          durationType: loanDuration?.durationType,
+          durationValue: loanDuration?.durationValue,
+          intrest: loanDuration?.intrest,
+          location: { id: loanDuration?.location?.id },
+        },
+      });
+
+      let {
+        id: existingDurationId,
+        createdOn,
+        ...existingLoanDurationWithoutId
+      } = existingLoanDuration ?? {};
+      let { id: durationId, ...loanDurationWithoutId } = loanDuration;
+
+      let isExisting =
+        JSON.stringify(existingLoanDurationWithoutId) ===
+        JSON.stringify(loanDurationWithoutId);
+
+      if (isExisting) {
+        return { infoMessage: "Duration already exists" };
+      }
+      let saveOrUpdatedLoanDuration = await this.loanDurationRepo.save(
         LoanDurationDto.toEntity(loanDuration)
       );
-    } catch (error) {
-      throw new Error("Failed to save or update loan duration");
-    }
 
-    return savedLoanDuration;
+      return {
+        successMessage: reponseGenerator(
+          "Duration",
+          loanDuration?.id,
+          loanDuration?.status
+        ),
+        result: saveOrUpdatedLoanDuration,
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to save or update loan duration ${error.message}`
+      );
+    }
   }
 }

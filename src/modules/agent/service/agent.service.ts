@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, ILike, Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { AgentEntity } from "../../models/entity/agent.entity";
 import { AgentDto } from "../../models/dto/agent.dto";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
+import { reponseGenerator } from "../../../util/common";
 
 @Injectable()
 export class AgentService {
@@ -14,6 +15,28 @@ export class AgentService {
     private agentLocationRepo: Repository<AgentLocationEntity>,
     private readonly dataSource: DataSource
   ) {}
+
+  async getAgent(id: number) {
+    let agentList: AgentEntity;
+    try {
+      agentList = await this.agentRepo
+        .createQueryBuilder("agent")
+        .leftJoinAndSelect(
+          "agent.agentLocation",
+          "agentLocation",
+          "agentLocation.status = :status",
+          { status: "ACTIVE" }
+        )
+        .leftJoinAndSelect("agentLocation.location", "location")
+        .leftJoinAndSelect("agentLocation.day", "day")
+        .leftJoinAndSelect("agentLocation.phase", "phase")
+        .where(id ? "agent.id =:id" : "1=1", { id })
+        .getOne();
+    } catch (err) {
+      throw new Error(`Failed to get agent ${err.message}`);
+    }
+    return agentList;
+  }
 
   async getAgentList(
     name: any,
@@ -48,12 +71,12 @@ export class AgentService {
         .addOrderBy("day.id", "ASC")
         .getMany();
     } catch (err) {
-      throw new Error("Failed to get agent list");
+      throw new Error(`Failed to get agents ${err.message}`);
     }
     return agentList;
   }
 
-  public async saveOrUpdateAgent(agent: AgentDto): Promise<AgentEntity> {
+  public async saveOrUpdateAgent(agent: AgentDto) {
     let savedAgent;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -63,6 +86,20 @@ export class AgentService {
       const { agentLocation, ...agentPayload } = agent;
 
       savedAgent = await queryRunner.manager.save(AgentEntity, agentPayload);
+
+      const agentWithRelations = await queryRunner.manager.findOne(
+        AgentEntity,
+        {
+          where: { id: savedAgent.id },
+          relations: {
+            agentLocation: {
+              location: true,
+              day: true,
+              phase: true,
+            },
+          },
+        }
+      );
 
       // Get all admins once (outside loop would be even better)
       const adminList = await this.agentRepo.find({
@@ -100,35 +137,15 @@ export class AgentService {
       );
 
       await queryRunner.commitTransaction();
+      return {
+        successMessage: reponseGenerator("Agent", agent?.id, agent?.status),
+        result: agentWithRelations,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(`Transaction Failed: ${error.message}`);
     } finally {
       await queryRunner.release();
     }
-
-    return savedAgent;
-  }
-
-  async getAreaList(agentId: number, status: string) {
-    let areaList;
-    try {
-      areaList = await this.agentRepo
-        .createQueryBuilder("agent")
-        .leftJoin("agent.agentLocation", "agentLocation")
-        .leftJoin("agentLocation.location", "location")
-        .leftJoin("location.areaList", "areaList")
-        .where(agentId ? "agent.id = :agentId" : "1=1", { agentId })
-        .andWhere(status ? "areaList.status = :status" : "1=1", { status })
-        .select([
-          "areaList.id AS id",
-          "areaList.name AS name",
-          "areaList.createdOn AS createdOn",
-        ])
-        .getRawMany();
-    } catch (err) {
-      throw new Error("Failed to get area list");
-    }
-    return areaList;
   }
 }

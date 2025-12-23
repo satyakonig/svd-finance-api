@@ -34,3 +34,13 @@ export function getPhase(phaseCount, phaseId) {
     return phaseId;
   }
 }
+
+export function reponseGenerator(name: String, id: number, status: String) {
+  if (status === "ACTIVE" && !id) {
+    return `${name} saved successfully`;
+  } else if (status === "ACTIVE" && id) {
+    return `${name} updated successfully`;
+  } else if (status === "INACTIVE") {
+    return `${name} deleted successfully`;
+  }
+}

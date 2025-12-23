@@ -7,6 +7,11 @@ import { JwtAuthGuard } from "../../auth/guard/auth.guard";
 export class AgentController {
   constructor(private agentService: AgentService) {}
 
+  @Get()
+  public getAgent(@Query("id") id: number) {
+    return this.agentService.getAgent(id);
+  }
+
   @Get("getall")
   public getAgentList(
     @Query("name") name: any,
@@ -27,13 +32,5 @@ export class AgentController {
   @Post("save")
   public saveOrUpdateAgent(@Body() payload: any) {
     return this.agentService.saveOrUpdateAgent(payload);
-  }
-
-  @Get("areas")
-  public getAreaList(
-    @Query("agentId") agentId: number,
-    @Query("status") status: string
-  ) {
-    return this.agentService.getAreaList(agentId, status);
   }
 }

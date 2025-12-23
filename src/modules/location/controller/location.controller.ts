@@ -7,6 +7,11 @@ import { JwtAuthGuard } from "../../auth/guard/auth.guard";
 export class LocationController {
   constructor(private locationService: LocationService) {}
 
+  @Get()
+  public getLocation(@Query("id") id: number) {
+    return this.locationService.getLocation(id);
+  }
+
   @Get("list")
   public getLocationList(
     @Query("name") name: string,

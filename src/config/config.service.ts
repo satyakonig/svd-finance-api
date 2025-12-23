@@ -43,7 +43,7 @@ class ConfigService {
       password: this.getValue("DB_PASSWORD"),
       database: this.getValue("DB_DATABASE"),
       schema: this.getValue("DB_SCHEMA"),
-      synchronize: true,
+      synchronize: false,
       autoLoadEntities: true,
       ssl: this.isProduction(),
     };

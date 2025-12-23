@@ -7,6 +7,11 @@ import { AreaService } from "../service/area.service";
 export class AreaController {
   constructor(private areaService: AreaService) {}
 
+  @Get()
+  public getArea(@Query("id") id: number) {
+    return this.areaService.getArea(id);
+  }
+
   @Get("getall")
   public getAreaList(
     @Query("name") name: any,
