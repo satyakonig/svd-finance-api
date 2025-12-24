@@ -6,11 +6,10 @@ import { BFDto } from "../../models/dto/bf.dto";
 import { LoanEntity } from "../../models/entity/loan.entity";
 import { LoanPaymentEntity } from "../../models/entity/loan-payment.entity";
 import { SpentEntity } from "../../models/entity/spent.entity";
-import { getPhase, getPreviousPhaseAndDate } from "../../../util/common";
+import { getPhase, reponseGenerator } from "../../../util/common";
 import { LocationEntity } from "../../models/entity/location.entity";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
-import { ChitTransactionEntity } from "src/modules/models/entity/chit.transaction.entity";
 
 @Injectable()
 export class BFService {
@@ -25,8 +24,6 @@ export class BFService {
     private spentRepo: Repository<SpentEntity>,
     @InjectRepository(FineEntity)
     private fineRepo: Repository<FineEntity>,
-    @InjectRepository(ChitTransactionEntity)
-    private chitTransactionRepo: Repository<ChitTransactionEntity>,
     @InjectRepository(AgentLocationEntity)
     private agentLocationRepo: Repository<AgentLocationEntity>,
     @InjectRepository(LocationEntity)
@@ -72,14 +69,30 @@ export class BFService {
     }
   }
 
-  public async saveOrUpdateBF(bf: BFDto): Promise<BFEntity> {
-    let savedBF: BFEntity;
+  public async saveOrUpdateBF(bf: BFDto) {
     try {
-      savedBF = await this.bfRepo.save(BFDto.toEntity(bf));
+      let savedBF = await this.bfRepo.save(BFDto.toEntity(bf));
+
+      let savedBfWithRelations = await this.bfRepo.findOne({
+        where: {
+          id: savedBF?.id ?? undefined,
+        },
+        relations: [
+          "agentLocation",
+          "agentLocation.day",
+          "agentLocation.location",
+          "agentLocation.phase",
+          "agentLocation.agent",
+        ],
+      });
+
+      return {
+        successMessage: reponseGenerator("BF", bf?.id, bf?.status),
+        result: savedBfWithRelations,
+      };
     } catch (error) {
       throw new Error(`Failed to save or update BF Error: ${error?.message}`);
     }
-    return savedBF;
   }
 
   public async generateBF(date: string, phaseId: number, locationId: number) {
@@ -173,43 +186,16 @@ export class BFService {
       .andWhere("phase.id = :phaseId", { phaseId })
       .getRawOne();
 
-    const chitsRow = await this.chitTransactionRepo
-      .createQueryBuilder("chitTransaction")
-      .leftJoin("chitTransaction.agentLocation", "agentLocation")
-      .leftJoin("agentLocation.location", "location")
-      .leftJoin("agentLocation.phase", "phase")
-      .select("SUM(chitTransaction.amount)", "sum")
-      .addSelect("chitTransaction.type", "type")
-      .groupBy("chitTransaction.type")
-      .where("chitTransaction.date = :date", { date })
-      .andWhere("chitTransaction.status = :status", { status: "ACTIVE" })
-      .andWhere("location.id = :locationId", { locationId })
-      .andWhere("phase.id = :phaseId", { phaseId })
-      .getRawMany();
-
-    const formattedChitsRow = chitsRow?.reduce((acc, obj) => {
-      acc[obj?.type] = obj?.sum;
-      return acc;
-    }, {});
-
     // Convert all sums to numeric
     const collectionTotal = Number(collectionRow?.sum ?? 0);
     const paymentTotal = Number(paymentRow?.loanSum ?? 0);
     const payableTotal = Number(paymentRow?.payableSum ?? 0);
     const spentTotal = Number(spentRow?.sum ?? 0);
     const finesTotal = Number(finesRow?.sum ?? 0);
-    const chitsPay = Number(formattedChitsRow?.chitInstallment ?? 0);
-    const chitsCollect = Number(formattedChitsRow?.chitWithdraw ?? 0);
 
     // --- 5. Final BF calculation ---
     const bf =
-      prevBf +
-      finesTotal +
-      collectionTotal -
-      spentTotal -
-      paymentTotal +
-      chitsCollect -
-      chitsPay;
+      prevBf + finesTotal + collectionTotal - spentTotal - paymentTotal;
 
     const interestTotal = payableTotal - paymentTotal;
 
@@ -221,7 +207,6 @@ export class BFService {
       spentTotal,
       finesTotal,
       interestTotal,
-      ...formattedChitsRow,
       bf,
     };
 

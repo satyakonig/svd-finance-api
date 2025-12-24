@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { CustomerEntity } from "../../models/entity/customer.entity";
 import { DataSource, ILike, Repository } from "typeorm";
 import { LoanEntity } from "../../models/entity/loan.entity";
+import { reponseGenerator } from "src/util/common";
 
 @Injectable()
 export class CustomerService {
@@ -11,6 +12,21 @@ export class CustomerService {
     private customerRepo: Repository<CustomerEntity>,
     private readonly dataSource: DataSource
   ) {}
+
+  async getCustomer(id: number) {
+    let customer: {};
+    try {
+      customer = await this.customerRepo.findOne({
+        where: {
+          id: id ?? undefined,
+        },
+        relations: ["area"],
+      });
+      return customer;
+    } catch (err) {
+      throw new Error("Failed to get customer list");
+    }
+  }
 
   async getCustomerList(
     name: any,
@@ -47,9 +63,7 @@ export class CustomerService {
     return { list: result[0], count: result[1] };
   }
 
-  public async saveOrUpdateCustomerAndLoan(
-    payload: any
-  ): Promise<CustomerEntity> {
+  public async saveOrUpdateCustomerAndLoan(payload: any) {
     let savedCustomer;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -65,13 +79,20 @@ export class CustomerService {
       }
 
       await queryRunner.commitTransaction();
+
+      return {
+        successMessage: reponseGenerator(
+          "Customer",
+          payload?.customer?.id,
+          payload?.customer?.status
+        ),
+        result: savedCustomer,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(`Transaction Failed: ${error.message}`);
     } finally {
       await queryRunner.release();
     }
-
-    return savedCustomer;
   }
 }

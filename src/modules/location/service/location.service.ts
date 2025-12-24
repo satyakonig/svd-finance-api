@@ -30,7 +30,7 @@ export class LocationService {
           id: id ?? undefined,
         },
       });
-      return location;
+      return location ?? {};
     } catch (err) {
       throw new Error(`Failed to get location ${err.message}`);
     }
@@ -59,21 +59,11 @@ export class LocationService {
       const existingLocation = await this.locationRepo
         .createQueryBuilder("location")
         .where("LOWER(location.name) = LOWER(:name)", {
-          name: location?.name ?? "",
+          name: location?.name,
         })
         .getOne();
 
-      let {
-        id: existingLocationId,
-        createdOn,
-        ...existingLocationWithoutId
-      } = existingLocation ?? {};
-      let { id: locationId, ...locationWithoutId } = location;
-
-      let isExisting =
-        JSON.stringify(existingLocationWithoutId) ===
-        JSON.stringify(locationWithoutId);
-      if (isExisting) {
+      if (existingLocation && !location?.id) {
         return { infoMessage: "Location already exists" };
       }
       let saveOrUpdatedLocation = await this.locationRepo.save(

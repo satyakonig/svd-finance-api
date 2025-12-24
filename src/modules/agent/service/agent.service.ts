@@ -87,20 +87,6 @@ export class AgentService {
 
       savedAgent = await queryRunner.manager.save(AgentEntity, agentPayload);
 
-      const agentWithRelations = await queryRunner.manager.findOne(
-        AgentEntity,
-        {
-          where: { id: savedAgent.id },
-          relations: {
-            agentLocation: {
-              location: true,
-              day: true,
-              phase: true,
-            },
-          },
-        }
-      );
-
       // Get all admins once (outside loop would be even better)
       const adminList = await this.agentRepo.find({
         where: { role: "ADMIN" },
@@ -137,6 +123,20 @@ export class AgentService {
       );
 
       await queryRunner.commitTransaction();
+
+      let agentWithRelations = await this.agentRepo
+        .createQueryBuilder("agent")
+        .leftJoinAndSelect(
+          "agent.agentLocation",
+          "agentLocation",
+          "agentLocation.status = :status",
+          { status: "ACTIVE" }
+        )
+        .leftJoinAndSelect("agentLocation.location", "location")
+        .leftJoinAndSelect("agentLocation.day", "day")
+        .leftJoinAndSelect("agentLocation.phase", "phase")
+        .where("agent.id = :id", { id: savedAgent?.id })
+        .getOne();
       return {
         successMessage: reponseGenerator("Agent", agent?.id, agent?.status),
         result: agentWithRelations,

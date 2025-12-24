@@ -25,7 +25,7 @@ export class AreaService {
     } catch (err) {
       throw new Error(`Failed to get area ${err.message}`);
     }
-    return area;
+    return area ?? {};
   }
 
   async getAreaList(name: any, status: string, locationId: any) {
@@ -59,16 +59,7 @@ export class AreaService {
         })
         .getOne();
 
-      let {
-        id: existingAreaId,
-        createdOn,
-        ...existingAreaWithoutId
-      } = existingArea ?? {};
-      let { id: areaId, ...areaWithoutId } = area;
-
-      let isExisting =
-        JSON.stringify(existingAreaWithoutId) === JSON.stringify(areaWithoutId);
-      if (isExisting) {
+      if (existingArea && !area.id) {
         return { infoMessage: "Area already exists" };
       }
       let saveOrUpdatedArea = await this.areaRepo.save(AreaDto.toEntity(area));

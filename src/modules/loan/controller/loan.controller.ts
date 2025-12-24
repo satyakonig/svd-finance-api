@@ -1,11 +1,22 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { LoanService } from "../service/loan.service";
 import { JwtAuthGuard } from "../../auth/guard/auth.guard";
+import { stat } from "fs";
 
 @Controller("loan")
 @UseGuards(JwtAuthGuard)
 export class LoanController {
   constructor(private loanService: LoanService) {}
+
+  @Get()
+  public getLoan(
+    @Query("id") id: number,
+    @Query("status") status: string,
+    @Query("customerId") customerId: number,
+    @Query("paymentDate") paymentDate: string
+  ) {
+    return this.loanService.getLoan(id, status, customerId, paymentDate);
+  }
 
   @Get("getall")
   public getLoanList(

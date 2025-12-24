@@ -4,14 +4,14 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { LoanDto } from "../../models/dto/loan.dto";
 import { LoanEntity } from "../../models/entity/loan.entity";
-import { Repository } from "typeorm";
+import { Long, Repository } from "typeorm";
 import { LoanPaymentEntity } from "../../models/entity/loan-payment.entity";
 import { SpentEntity } from "../../models/entity/spent.entity";
 import { LocationEntity } from "../../models/entity/location.entity";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
 import { error } from "console";
-import { ChitTransactionEntity } from "../../models/entity/chit.transaction.entity";
+import { number } from "joi";
 
 @Injectable()
 export class LoanService {
@@ -27,12 +27,44 @@ export class LoanService {
     @InjectRepository(BFEntity)
     private bfRepo: Repository<BFEntity>,
     @InjectRepository(FineEntity)
-    private fineRepo: Repository<FineEntity>,
-    @InjectRepository(ChitTransactionEntity)
-    private chitTranRepo: Repository<ChitTransactionEntity>
+    private fineRepo: Repository<FineEntity>
   ) {}
 
-  async getLoanList(
+  public async getLoan(
+    id: number,
+    status: string,
+    customerId: number,
+    paymentDate: string
+  ) {
+    try {
+      let query = await this.loanRepo
+        .createQueryBuilder("loan")
+        .leftJoinAndSelect("loan.loanDuration", "loanDuration")
+        .leftJoinAndSelect("loan.agentLocation", "agentLocation")
+        .leftJoinAndSelect("loan.customer", "customer")
+        .where(id ? "loan.id = :id" : "1=1", { id })
+        .andWhere(status ? "loan.status = :status" : "1=1", { status })
+        .andWhere(customerId ? "customer.id = :customerId" : "1=1", {
+          customerId,
+        });
+
+      if (paymentDate) {
+        query.leftJoinAndSelect(
+          "loan.payments",
+          "payments",
+          "payments.paymentDate = :paymentDate",
+          { paymentDate }
+        );
+      }
+
+      let loan = query.getOne();
+      return loan ?? {};
+    } catch (err) {
+      throw new Error(`Failed to fetch loan - ${err.message || err}`);
+    }
+  }
+
+  public async getLoanList(
     loanId: any,
     status: any,
     customerName: any,
@@ -237,18 +269,6 @@ export class LoanService {
           .andWhere("fine.status = :status", { status: "ACTIVE" })
           .getMany();
 
-        const chitTrans = await this.chitTranRepo
-          .createQueryBuilder("chitTran")
-          .leftJoinAndSelect("chitTran.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
-          .where("location.id = :locationId", { locationId })
-          .andWhere("chitTran.status = :status", { status: "ACTIVE" })
-          .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-          .andWhere(date ? "chitTran.date = :date" : "1=1", { date })
-          .getMany();
-
         return {
           id: locationId,
           name: locationName,
@@ -257,7 +277,6 @@ export class LoanService {
           spent,
           fines,
           bf,
-          chitTrans,
         };
       })
     );

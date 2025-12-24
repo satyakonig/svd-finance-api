@@ -7,6 +7,11 @@ import { JwtAuthGuard } from "../../auth/guard/auth.guard";
 export class CustomerController {
   constructor(private customerService: CustomerService) {}
 
+  @Get()
+  public getCustomer(@Query("id") id: number) {
+    return this.customerService.getCustomer(id);
+  }
+
   @Get("getall")
   public getCustomerList(
     @Query("name") name: any,

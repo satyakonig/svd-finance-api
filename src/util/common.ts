@@ -40,7 +40,7 @@ export function reponseGenerator(name: String, id: number, status: String) {
     return `${name} saved successfully`;
   } else if (status === "ACTIVE" && id) {
     return `${name} updated successfully`;
-  } else if (status === "INACTIVE") {
+  } else if (status === "INACTIVE" || status === "DELETE") {
     return `${name} deleted successfully`;
   }
 }

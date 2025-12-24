@@ -57,18 +57,7 @@ export class LoanDurationService {
         },
       });
 
-      let {
-        id: existingDurationId,
-        createdOn,
-        ...existingLoanDurationWithoutId
-      } = existingLoanDuration ?? {};
-      let { id: durationId, ...loanDurationWithoutId } = loanDuration;
-
-      let isExisting =
-        JSON.stringify(existingLoanDurationWithoutId) ===
-        JSON.stringify(loanDurationWithoutId);
-
-      if (isExisting) {
+      if (existingLoanDuration && !loanDuration?.id) {
         return { infoMessage: "Duration already exists" };
       }
       let saveOrUpdatedLoanDuration = await this.loanDurationRepo.save(

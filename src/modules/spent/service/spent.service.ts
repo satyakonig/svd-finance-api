@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { SpentDto } from "../../models/dto/spent.dto";
 import { SpentEntity } from "../../models/entity/spent.entity";
 import { Repository } from "typeorm";
+import { reponseGenerator } from "../../../util/common";
 
 @Injectable()
 export class SpentService {
@@ -10,6 +11,28 @@ export class SpentService {
     @InjectRepository(SpentEntity)
     private spentRepo: Repository<SpentEntity>
   ) {}
+
+  async getSpent(id: number) {
+    let spent: SpentEntity;
+    try {
+      spent = await this.spentRepo.findOne({
+        where: {
+          id: id ?? null,
+        },
+        relations: [
+          "agentLocation",
+          "agentLocation.agent",
+          "agentLocation.location",
+        ],
+        order: {
+          expenseDescription: "ASC",
+        },
+      });
+    } catch (err) {
+      throw new Error("Failed to get spent list");
+    }
+    return spent;
+  }
 
   async getSpentList(
     agentId: any,
@@ -45,32 +68,22 @@ export class SpentService {
     return spentList;
   }
 
-  public async saveOrUpdateSpent(spent: SpentDto): Promise<SpentEntity> {
-    let updatedSpent: SpentEntity;
-
+  public async saveOrUpdateSpent(spent: SpentDto) {
     try {
-      if (spent.id) {
-        const result = await this.spentRepo.update(
-          spent.id,
-          SpentDto.toEntity(spent)
-        );
+      let saveOrUpdatedSpent: SpentEntity;
+      saveOrUpdatedSpent = await this.spentRepo.save(SpentDto.toEntity(spent));
 
-        if (result.affected === 0) {
-          throw new Error(
-            `Spent with ID ${spent.id} not found or no changes detected.`
-          );
-        }
+      let saveOrUpdatedSpentWithRelation = await this.spentRepo.findOne({
+        where: { id: saveOrUpdatedSpent.id },
+        relations: ["agentLocation", "agentLocation.agent"],
+      });
 
-        updatedSpent = await this.spentRepo.findOne({
-          where: { id: spent.id },
-        });
-      } else {
-        updatedSpent = await this.spentRepo.save(SpentDto.toEntity(spent));
-      }
+      return {
+        successMessage: reponseGenerator("Spent", spent?.id, spent?.status),
+        result: saveOrUpdatedSpentWithRelation,
+      };
     } catch (error) {
       throw new Error("Failed to update spent");
     }
-
-    return updatedSpent;
   }
 }

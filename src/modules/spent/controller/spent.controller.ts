@@ -7,6 +7,11 @@ import { JwtAuthGuard } from "../../auth/guard/auth.guard";
 export class SpentController {
   constructor(private spentService: SpentService) {}
 
+  @Get()
+  public getSpent(@Query("id") id: number) {
+    return this.spentService.getSpent(id);
+  }
+
   @Get("list")
   public getSpentList(
     @Query("agentId") agentId: any,
