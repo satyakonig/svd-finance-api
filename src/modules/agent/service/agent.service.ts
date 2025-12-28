@@ -16,6 +16,16 @@ export class AgentService {
     private readonly dataSource: DataSource
   ) {}
 
+  async validateUserName(username: string) {
+    let isExist = await this.agentRepo.exists({
+      where: {
+        username: username,
+      },
+    });
+
+    return isExist;
+  }
+
   async getAgent(id: number) {
     let agentList: AgentEntity;
     try {
@@ -112,8 +122,9 @@ export class AgentService {
 
               if (!existing) {
                 // Create a NEW object — DO NOT reuse loc
+                let { id, status, createdOn, supportPerson, ...locRest } = loc;
                 await queryRunner.manager.save(AgentLocationEntity, {
-                  ...loc,
+                  ...locRest,
                   agent: admin,
                 });
               }

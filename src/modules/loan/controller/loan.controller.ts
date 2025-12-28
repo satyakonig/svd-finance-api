@@ -13,9 +13,18 @@ export class LoanController {
     @Query("id") id: number,
     @Query("status") status: string,
     @Query("customerId") customerId: number,
-    @Query("paymentDate") paymentDate: string
+    @Query("paymentDate") paymentDate: string,
+    @Query("payments") payments: boolean,
+    @Query("fines") fines: boolean
   ) {
-    return this.loanService.getLoan(id, status, customerId, paymentDate);
+    return this.loanService.getLoan(
+      id,
+      status,
+      customerId,
+      paymentDate,
+      payments,
+      fines
+    );
   }
 
   @Get("getall")

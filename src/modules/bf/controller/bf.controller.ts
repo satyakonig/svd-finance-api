@@ -37,9 +37,10 @@ export class BFController {
   public generateBF(
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
-    @Query("locationId") locationId: any
+    @Query("locationId") locationId: any,
+    @Query("regenerate") regenerate: boolean
   ) {
-    return this.bfService.generateBF(date, phaseId, locationId);
+    return this.bfService.generateBF(date, phaseId, locationId, regenerate);
   }
 
   @Get("report")

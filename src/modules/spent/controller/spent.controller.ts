@@ -18,14 +18,18 @@ export class SpentController {
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
     @Query("locationId") locationId: any,
-    @Query("status") status: any
+    @Query("status") status: any,
+    @Query("pageIndex") pageIndex: any,
+    @Query("pageSize") pageSize: any
   ) {
     return this.spentService.getSpentList(
       agentId,
       date,
       phaseId,
       locationId,
-      status
+      status,
+      pageIndex,
+      pageSize
     );
   }
 

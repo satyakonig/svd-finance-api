@@ -39,7 +39,9 @@ export class SpentService {
     date: any,
     phaseId: any,
     locationId: any,
-    status: any
+    status: any,
+    pageIndex: number = 0,
+    pageSize: number = 10
   ) {
     let spentList: SpentEntity[];
     try {

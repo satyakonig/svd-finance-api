@@ -58,6 +58,7 @@ export class BFService {
             : "1=1",
           { fromDate, toDate }
         )
+        .orderBy("bf.id", "DESC")
         .skip(pageIndex * pageSize)
         .take(pageSize);
 
@@ -95,7 +96,12 @@ export class BFService {
     }
   }
 
-  public async generateBF(date: string, phaseId: number, locationId: number) {
+  public async generateBF(
+    date: string,
+    phaseId: number,
+    locationId: number,
+    regenerate: boolean
+  ) {
     // --- 1. Fetch existing BF if present ---
     const existingBf = await this.bfRepo.findOne({
       where: {
@@ -106,6 +112,10 @@ export class BFService {
         },
       },
     });
+
+    if (existingBf && !regenerate) {
+      return existingBf;
+    }
 
     // --- 2. Count unique phases for previous-phase logic ---
     const phaseCountRaw = await this.agentLocationRepo

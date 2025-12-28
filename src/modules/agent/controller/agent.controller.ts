@@ -7,6 +7,11 @@ import { JwtAuthGuard } from "../../auth/guard/auth.guard";
 export class AgentController {
   constructor(private agentService: AgentService) {}
 
+  @Get("username/validate")
+  public validateUserName(@Query("username") username: string) {
+    return this.agentService.validateUserName(username);
+  }
+
   @Get()
   public getAgent(@Query("id") id: number) {
     return this.agentService.getAgent(id);
