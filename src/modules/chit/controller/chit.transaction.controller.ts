@@ -7,20 +7,27 @@ import { ChitTransactionService } from "../service/chit.transaction.service";
 export class ChitTransactionController {
   constructor(private chitTransactionService: ChitTransactionService) {}
 
+  @Get()
+  public getChitTransaction(@Query("id") id: number) {
+    return this.chitTransactionService.getChitTransaction(id);
+  }
+
   @Get("list")
   public getChitTransactionList(
-    @Query("agentId") agentId: any,
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
     @Query("locationId") locationId: any,
-    @Query("status") status: any
+    @Query("status") status: any,
+    @Query("pageIndex") pageIndex: any,
+    @Query("pageSize") pageSize: any
   ) {
     return this.chitTransactionService.getChitTransactionList(
-      agentId,
       date,
       phaseId,
       locationId,
-      status
+      status,
+      pageIndex,
+      pageSize
     );
   }
 

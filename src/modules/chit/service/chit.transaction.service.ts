@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ChitTransactionEntity } from "../../models/entity/chit.transaction.entity";
 import { ChitTransactionDto } from "../../models/dto/chit.transaction.dto";
+import { reponseGenerator } from "../../../util/common";
 
 @Injectable()
 export class ChitTransactionService {
@@ -11,70 +12,88 @@ export class ChitTransactionService {
     private chitTransactionRepo: Repository<ChitTransactionEntity>
   ) {}
 
-  async getChitTransactionList(
-    agentId: any,
-    date: any,
-    phaseId: any,
-    locationId: any,
-    status: any
-  ) {
-    let chitTransactionList: ChitTransactionEntity[];
+  async getChitTransaction(id: number) {
     try {
-      chitTransactionList = await this.chitTransactionRepo.find({
-        where: {
-          status: status ?? null,
-          date: date ?? null,
-          agentLocation: {
-            agent: { id: agentId ?? null },
-            location: { id: locationId ?? null },
-            phase: { id: phaseId ?? null },
-          },
-        },
-        relations: [
-          "agentLocation",
-          "agentLocation.agent",
-          "agentLocation.location",
-        ],
-        order: {
-          description: "ASC",
-        },
-      });
+      let chitTransaction = this.chitTransactionRepo
+        .createQueryBuilder("chitTransaction")
+        .leftJoinAndSelect("chitTransaction.agentLocation", "agentLocation")
+        .where("chitTransaction.id =:id", { id })
+        .getOne();
+
+      return chitTransaction;
     } catch (err) {
       throw new Error("Failed to get chit list");
     }
-    return chitTransactionList;
   }
 
-  public async saveOrUpdateChitTransaction(
-    chit: ChitTransactionDto
-  ): Promise<ChitTransactionEntity> {
-    let updatedChit: ChitTransactionEntity;
-
+  async getChitTransactionList(
+    date: any,
+    phaseId: any,
+    locationId: any,
+    status: any,
+    pageIndex: number,
+    pageSize: number
+  ) {
     try {
-      if (chit.id) {
-        const result = await this.chitTransactionRepo.update(
-          chit.id,
-          ChitTransactionDto.toEntity(chit)
-        );
+      let query = this.chitTransactionRepo
+        .createQueryBuilder("chitTransaction")
+        .select([
+          "chitTransaction.id AS id",
+          "chitTransaction.description AS description",
+          "chitTransaction.type AS type",
+          "chitTransaction.date AS date",
+          "chitTransaction.amount AS amount",
+          "agent.name AS agentname",
+        ])
+        .leftJoin("chitTransaction.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("agentLocation.phase", "phase")
+        .leftJoin("agentLocation.location", "location")
+        .where("agent.status =:status", { status })
+        .andWhere("chitTransaction.date =:date", { date })
+        .andWhere("phase.id =:phaseId", { phaseId })
+        .andWhere("location.id =:locationId", { locationId });
 
-        if (result.affected === 0) {
-          throw new Error(
-            `Chit Transaction with ID ${chit.id} not found or no changes detected.`
-          );
-        }
-
-        updatedChit = await this.chitTransactionRepo.findOne({
-          where: { id: chit.id },
-        });
-      } else {
-        updatedChit = await this.chitTransactionRepo.save(
-          ChitTransactionDto.toEntity(chit)
-        );
+      if (pageIndex != null && pageSize != null) {
+        query.offset(pageIndex * pageSize).limit(pageSize);
       }
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
+
+      return { list, count };
+    } catch (err) {
+      throw new Error("Failed to get chit list");
+    }
+  }
+
+  public async saveOrUpdateChitTransaction(chit: ChitTransactionDto) {
+    try {
+      let savedChitTransaction = await this.chitTransactionRepo.save(
+        ChitTransactionDto.toEntity(chit)
+      );
+
+      let saveOrUpdatedSpentWithRelation = await this.chitTransactionRepo
+        .createQueryBuilder("chitTransaction")
+        .leftJoin("chitTransaction.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .select([
+          "chitTransaction.id AS id",
+          "chitTransaction.description AS description",
+          "chitTransaction.type AS type",
+          "chitTransaction.date AS date",
+          "chitTransaction.amount AS amount",
+          "agent.name AS agentname",
+        ])
+        .where("chitTransaction.id =:id", { id: savedChitTransaction?.id })
+        .getRawOne();
+
+      return {
+        successMessage: reponseGenerator("Chit", chit?.id, chit?.status),
+        result: saveOrUpdatedSpentWithRelation,
+      };
     } catch (error) {
       throw new Error("Failed to update chit transaction");
     }
-
-    return updatedChit;
   }
 }

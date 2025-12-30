@@ -10,6 +10,7 @@ import { getPhase, reponseGenerator } from "../../../util/common";
 import { LocationEntity } from "../../models/entity/location.entity";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
+import { ChitTransactionEntity } from "../../models/entity/chit.transaction.entity";
 
 @Injectable()
 export class BFService {
@@ -27,7 +28,9 @@ export class BFService {
     @InjectRepository(AgentLocationEntity)
     private agentLocationRepo: Repository<AgentLocationEntity>,
     @InjectRepository(LocationEntity)
-    private locationRepo: Repository<LocationEntity>
+    private locationRepo: Repository<LocationEntity>,
+    @InjectRepository(ChitTransactionEntity)
+    private chitTransactionRepo: Repository<ChitTransactionEntity>
   ) {}
 
   async getBFList(
@@ -36,17 +39,22 @@ export class BFService {
     date: any,
     phaseId: any,
     locationId: any,
-
     pageIndex: number = 0,
     pageSize: number = 10
   ) {
     try {
-      const query = this.bfRepo
+      let query = this.bfRepo
         .createQueryBuilder("bf")
-        .leftJoinAndSelect("bf.agentLocation", "agentLocation")
-        .leftJoinAndSelect("agentLocation.location", "location")
-        .leftJoinAndSelect("agentLocation.agent", "agent")
-        .leftJoinAndSelect("agentLocation.phase", "phase")
+        .select([
+          "bf",
+          "agent.name AS agentname",
+          "location.name AS locationname",
+          "phase.name AS phasename",
+        ])
+        .leftJoin("bf.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("agentLocation.phase", "phase")
         .where(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
         .andWhere(locationId ? "location.id = :locationId" : "1=1", {
           locationId,
@@ -62,9 +70,10 @@ export class BFService {
         .skip(pageIndex * pageSize)
         .take(pageSize);
 
-      const [data, count] = await query.getManyAndCount(); // <-- returns both data + total count
+      let list = await query.getRawMany();
+      let count = await query.getCount();
 
-      return { list: data, count: count };
+      return { list, count };
     } catch (err) {
       throw new Error("Failed to get BF list");
     }
@@ -196,16 +205,43 @@ export class BFService {
       .andWhere("phase.id = :phaseId", { phaseId })
       .getRawOne();
 
+    const chitsRow = await this.chitTransactionRepo
+      .createQueryBuilder("chitTransaction")
+      .leftJoin("chitTransaction.agentLocation", "agentLocation")
+      .leftJoin("agentLocation.location", "location")
+      .leftJoin("agentLocation.phase", "phase")
+      .select("SUM(chitTransaction.amount)", "sum")
+      .addSelect("chitTransaction.type", "type")
+      .groupBy("chitTransaction.type")
+      .where("chitTransaction.date = :date", { date })
+      .andWhere("chitTransaction.status = :status", { status: "ACTIVE" })
+      .andWhere("location.id = :locationId", { locationId })
+      .andWhere("phase.id = :phaseId", { phaseId })
+      .getRawMany();
+
+    const formattedChitsRow = chitsRow?.reduce((acc, obj) => {
+      acc[obj?.type] = obj?.sum;
+      return acc;
+    }, {});
+
     // Convert all sums to numeric
     const collectionTotal = Number(collectionRow?.sum ?? 0);
     const paymentTotal = Number(paymentRow?.loanSum ?? 0);
     const payableTotal = Number(paymentRow?.payableSum ?? 0);
     const spentTotal = Number(spentRow?.sum ?? 0);
     const finesTotal = Number(finesRow?.sum ?? 0);
+    const chitsPay = Number(formattedChitsRow?.chitInstallment ?? 0);
+    const chitsCollect = Number(formattedChitsRow?.chitWithdraw ?? 0);
 
     // --- 5. Final BF calculation ---
     const bf =
-      prevBf + finesTotal + collectionTotal - spentTotal - paymentTotal;
+      prevBf +
+      finesTotal +
+      collectionTotal -
+      spentTotal -
+      paymentTotal +
+      chitsCollect -
+      chitsPay;
 
     const interestTotal = payableTotal - paymentTotal;
 
@@ -217,6 +253,7 @@ export class BFService {
       spentTotal,
       finesTotal,
       interestTotal,
+      ...formattedChitsRow,
       bf,
     };
 
