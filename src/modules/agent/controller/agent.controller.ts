@@ -23,14 +23,18 @@ export class AgentController {
     @Query("mobileNo") mobileNo: any,
     @Query("status") status: any,
     @Query("location") location: any,
-    @Query("role") role: any
+    @Query("role") role: any,
+    @Query("pageSize") pageSize: number,
+    @Query("pageIndex") pageIndex: number
   ) {
     return this.agentService.getAgentList(
       name,
       mobileNo,
       status,
       location,
-      role
+      role,
+      pageSize,
+      pageIndex
     );
   }
 

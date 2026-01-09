@@ -107,6 +107,7 @@ export class LoanService {
           "loan.id AS id",
           "loan.status AS status",
           "loan.loanDate AS loanDate",
+          "loan.payableAmount AS payableamount",
           "loan.balanceAmount AS balanceAmount",
           "loan.label AS label",
           "customer.name AS name",
@@ -553,5 +554,33 @@ export class LoanService {
     }
 
     return serialNo;
+  }
+
+  public async getLoansHistory(customerId: number) {
+    try {
+      let loans = await this.loanRepo
+        .createQueryBuilder("loan")
+        .select([
+          "loan.id AS id",
+          "loan.loanDate AS loandate",
+          "loan.repayDate AS repaydate",
+          "loan.status AS status",
+          "loanDuration.durationValue AS loandurationvalue",
+          "loanDuration.durationType AS loandurationtype",
+          "agent.name AS agentname",
+          "loan.payableAmount AS payableamount",
+        ])
+        .leftJoin("loan.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("loan.customer", "customer")
+        .leftJoin("loan.loanDuration", "loanDuration")
+        .where("customer.id = :customerId", { customerId })
+        .getRawMany();
+
+      return loans;
+    } catch (err) {
+      throw error(`Failed to get customer history ${err}`);
+    }
   }
 }

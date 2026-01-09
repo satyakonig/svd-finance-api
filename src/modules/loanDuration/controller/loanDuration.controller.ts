@@ -16,9 +16,16 @@ export class LoanDurationController {
   @Get("list")
   public getLoanDurationList(
     @Query("locationId") locationId: number,
-    @Query("status") status: string
+    @Query("status") status: string,
+    @Query("pageSize") pageSize: number,
+    @Query("pageIndex") pageIndex: number
   ) {
-    return this.loanDuration.getLoanDurationList(locationId, status);
+    return this.loanDuration.getLoanDurationList(
+      locationId,
+      status,
+      pageSize,
+      pageIndex
+    );
   }
 
   @Post("save")

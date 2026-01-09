@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { LoanService } from "../service/loan.service";
 import { JwtAuthGuard } from "../../auth/guard/auth.guard";
-import { stat } from "fs";
 
 @Controller("loan")
 @UseGuards(JwtAuthGuard)
@@ -87,5 +86,10 @@ export class LoanController {
     @Query("phaseId") phaseId: any
   ) {
     return this.loanService.generateSerialNo(locationId, phaseId);
+  }
+
+  @Get("history")
+  public getLoansHistory(@Query("customerId") customerId: number) {
+    return this.loanService.getLoansHistory(customerId);
   }
 }

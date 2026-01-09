@@ -46,7 +46,20 @@ export class BFService {
       let query = this.bfRepo
         .createQueryBuilder("bf")
         .select([
-          "bf",
+          "bf.bfDate AS bfdate",
+          "bf.previousBf AS previousbf",
+          "bf.collectionTotal AS collectiontotal",
+          "bf.finesTotal AS finestotal",
+          "bf.paymentTotal AS paymenttotal",
+          "bf.spentTotal AS spenttotal",
+          "bf.interestTotal AS interesttotal",
+          "bf.bf AS bf",
+          "bf.finalBf AS finalBf",
+          "bf.addedAmount AS addedamount",
+          "bf.transferedAmount AS transferedamount",
+          "bf.bfType AS bftype",
+          "bf.addedFrom AS addedfrom",
+          "bf.transferedTo AS transferedto",
           "agent.name AS agentname",
           "location.name AS locationname",
           "phase.name AS phasename",
@@ -281,10 +294,29 @@ export class BFService {
       locationsList.map(async ({ id: locationId, name: locationName }) => {
         const bf = await this.bfRepo
           .createQueryBuilder("bf")
-          .leftJoinAndSelect("bf.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "bf.bfDate AS bfdate",
+            "bf.previousBf AS previousbf",
+            "bf.collectionTotal AS collectiontotal",
+            "bf.finesTotal AS finestotal",
+            "bf.paymentTotal AS paymenttotal",
+            "bf.spentTotal AS spenttotal",
+            "bf.interestTotal AS interesttotal",
+            "bf.bf AS bf",
+            "bf.finalBf AS finalBf",
+            "bf.addedAmount AS addedamount",
+            "bf.transferedAmount AS transferedamount",
+            "bf.bfType AS bftype",
+            "bf.addedFrom AS addedfrom",
+            "bf.transferedTo AS transferedto",
+            "agent.name AS agentname",
+            "location.name AS locationname",
+            "phase.name AS phasename",
+          ])
+          .leftJoin("bf.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(date ? "bf.bfDate = :date" : "1=1", { date })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })

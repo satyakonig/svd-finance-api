@@ -36,31 +36,39 @@ export class CustomerService {
     pageIndex: number = 0,
     pageSize: number = 10
   ) {
-    let result: any;
     try {
       const skip = Number(pageIndex) * Number(pageSize);
       const take = Number(pageSize);
 
-      result = await this.customerRepo.findAndCount({
-        where: {
-          name: name ? ILike(`%${name}%`) : undefined,
-          mobileNo: mobileNo ? ILike(`%${mobileNo}%`) : undefined,
-          status: status ?? undefined,
-          area: {
-            location: { id: locationId ?? undefined },
-          },
-        },
-        skip,
-        take,
-        relations: ["area"],
-        order: {
-          name: "ASC",
-        },
-      });
+      let query = this.customerRepo
+        .createQueryBuilder("customer")
+        .select([
+          "customer.id AS id",
+          "customer.gender AS gender",
+          "customer.mobileNo AS mobileno",
+          "customer.name AS name",
+          "customer.status AS status",
+          "area.name AS areaname",
+        ])
+        .leftJoin("customer.area", "area")
+        .leftJoin("area.location", "location")
+        .where(name ? "customer.name =:name" : "1=1", { name: `%${name}%` })
+        .andWhere(mobileNo ? "customer.mobileNo =:mobileNo" : "1=1", {
+          mobileNo,
+        })
+        .andWhere("customer.status =:status", { status })
+        .andWhere("location.id =:locationId", { locationId })
+        .orderBy("name", "ASC")
+        .offset(skip)
+        .limit(take);
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
+
+      return { list, count };
     } catch (err) {
       throw new Error("Failed to get customer list");
     }
-    return { list: result[0], count: result[1] };
   }
 
   public async saveOrUpdateCustomerAndLoan(payload: any) {

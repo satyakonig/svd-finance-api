@@ -28,24 +28,37 @@ export class AreaService {
     return area ?? {};
   }
 
-  async getAreaList(name: any, status: string, locationId: any) {
-    let areaList: AreaEntity[];
+  async getAreaList(
+    name: any,
+    status: string,
+    locationId: any,
+    pageSize: number,
+    pageIndex: number
+  ) {
     try {
-      areaList = await this.areaRepo.find({
-        where: {
-          name: name ? ILike(`%${name}%`) : undefined,
-          status: status ?? undefined,
-          location: { id: locationId ?? undefined },
-        },
-        order: {
-          name: "ASC",
-        },
-        relations: ["location"],
-      });
+      let query = this.areaRepo
+        .createQueryBuilder("area")
+        .select([
+          "area.id AS id",
+          "area.name AS name",
+          "area.status AS status",
+          "location.name AS locationname",
+        ])
+        .leftJoin("area.location", "location")
+        .where(name ? "area.name =:name" : "1=1", { name: `%${name}%` })
+        .andWhere("area.status =:status", { status })
+        .andWhere("location.id =:locationId", { locationId })
+        .offset(pageSize * pageIndex)
+        .limit(pageSize)
+        .orderBy("area.name", "ASC");
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
+
+      return { list, count };
     } catch (err) {
       throw new Error(`Failed to get areas ${err.message}`);
     }
-    return areaList;
   }
 
   public async saveOrUpdateArea(area: AreaDto) {
@@ -64,9 +77,21 @@ export class AreaService {
       }
       let saveOrUpdatedArea = await this.areaRepo.save(AreaDto.toEntity(area));
 
+      let saveOrUpdatedAreaWithRelations = await this.areaRepo
+        .createQueryBuilder("area")
+        .select([
+          "area.id AS id",
+          "area.name AS name",
+          "area.status AS status",
+          "location.name AS locationname",
+        ])
+        .leftJoin("area.location", "location")
+        .where("area.id =:id", { id: saveOrUpdatedArea?.id })
+        .getRawOne();
+
       return {
         successMessage: reponseGenerator("Area", area?.id, area?.status),
-        result: saveOrUpdatedArea,
+        result: saveOrUpdatedAreaWithRelations,
       };
     } catch (error) {
       throw new Error(`Failed to get save or update area ${error.message}`);

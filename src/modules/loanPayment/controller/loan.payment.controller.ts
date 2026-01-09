@@ -16,4 +16,9 @@ export class LoanPaymentController {
   public getPayment(@Query("loanId") loanId: any, @Query("date") date: any) {
     return this.loanPayment.getPayment(loanId, date);
   }
+
+  @Get("list")
+  public getPaymentsList(@Query("loanId") loanId: any) {
+    return this.loanPayment.getPaymentsList(loanId);
+  }
 }

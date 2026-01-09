@@ -5,6 +5,7 @@ import { AgentEntity } from "../../models/entity/agent.entity";
 import { AgentDto } from "../../models/dto/agent.dto";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
 import { reponseGenerator } from "../../../util/common";
+import { MAX_AGENTS_LIMIT } from "../../../util/constants";
 
 @Injectable()
 export class AgentService {
@@ -53,11 +54,12 @@ export class AgentService {
     mobileNo: any,
     status: any,
     location: any,
-    role: any
+    role: any,
+    pageSize: number,
+    pageIndex: number
   ) {
-    let agentList: AgentEntity[];
     try {
-      agentList = await this.agentRepo
+      let query = await this.agentRepo
         .createQueryBuilder("agent")
         .leftJoinAndSelect(
           "agent.agentLocation",
@@ -79,11 +81,17 @@ export class AgentService {
         .andWhere(role ? "agent.role = :role" : "1=1", { role })
         .orderBy("agent.name", "ASC")
         .addOrderBy("day.id", "ASC")
-        .getMany();
+        .skip(pageSize * pageIndex)
+        .limit(pageIndex)
+        .getManyAndCount();
+
+      let list = query[0];
+      let count = query[1];
+
+      return { list, count };
     } catch (err) {
       throw new Error(`Failed to get agents ${err.message}`);
     }
-    return agentList;
   }
 
   public async saveOrUpdateAgent(agent: AgentDto) {
@@ -94,6 +102,14 @@ export class AgentService {
 
     try {
       const { agentLocation, ...agentPayload } = agent;
+
+      let agentsCount = await this.agentRepo.count({
+        where: { role: "AGENT" },
+      });
+
+      if (agentsCount >= MAX_AGENTS_LIMIT) {
+        return { infoMessage: "Limit Exceeded, Increase your plan" };
+      }
 
       savedAgent = await queryRunner.manager.save(AgentEntity, agentPayload);
 

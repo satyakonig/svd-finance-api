@@ -40,34 +40,38 @@ export class SpentService {
     phaseId: any,
     locationId: any,
     status: any,
-    pageIndex: number = 0,
-    pageSize: number = 10
+    pageIndex: number,
+    pageSize: number
   ) {
-    let spentList: SpentEntity[];
     try {
-      spentList = await this.spentRepo.find({
-        where: {
-          status: status ?? null,
-          paymentDate: date ?? null,
-          agentLocation: {
-            agent: { id: agentId ?? null },
-            location: { id: locationId ?? null },
-            phase: { id: phaseId ?? null },
-          },
-        },
-        relations: [
-          "agentLocation",
-          "agentLocation.agent",
-          "agentLocation.location",
-        ],
-        order: {
-          expenseDescription: "ASC",
-        },
-      });
+      let query = this.spentRepo
+        .createQueryBuilder("spent")
+        .select([
+          "spent.id AS id",
+          "spent.expenseDescription AS expensedescription",
+          "spent.amount AS amount",
+          "agent.name AS agentname",
+        ])
+        .leftJoin("spent.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.phase", "phase")
+        .where("location.id =:locationId", { locationId })
+        .andWhere("phase.id =:phaseId", { phaseId })
+        .andWhere("spent.paymentDate =:date", { date })
+        .andWhere("spent.status =:status", { status });
+
+      if (pageIndex && pageSize) {
+        query.offset(pageSize * pageIndex).limit(pageSize);
+      }
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
+
+      return { list, count };
     } catch (err) {
       throw new Error("Failed to get spent list");
     }
-    return spentList;
   }
 
   public async saveOrUpdateSpent(spent: SpentDto) {
@@ -75,10 +79,18 @@ export class SpentService {
       let saveOrUpdatedSpent: SpentEntity;
       saveOrUpdatedSpent = await this.spentRepo.save(SpentDto.toEntity(spent));
 
-      let saveOrUpdatedSpentWithRelation = await this.spentRepo.findOne({
-        where: { id: saveOrUpdatedSpent.id },
-        relations: ["agentLocation", "agentLocation.agent"],
-      });
+      let saveOrUpdatedSpentWithRelation = await this.spentRepo
+        .createQueryBuilder("spent")
+        .select([
+          "spent.id AS id",
+          "spent.expenseDescription AS expensedescription",
+          "spent.amount AS amount",
+          "agent.name AS agentname",
+        ])
+        .leftJoin("spent.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .where("spent.id =:id", { id: saveOrUpdatedSpent })
+        .getRawOne();
 
       return {
         successMessage: reponseGenerator("Spent", spent?.id, spent?.status),

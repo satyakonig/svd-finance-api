@@ -36,10 +36,14 @@ export class LocationService {
     }
   }
 
-  async getLocationList(name: string, status: string) {
+  async getLocationList(
+    name: string,
+    status: string,
+    pageSize: number,
+    pageIndex: number
+  ) {
     try {
-      let locationList: LocationEntity[];
-      locationList = await this.locationRepo.find({
+      let result = await this.locationRepo.findAndCount({
         where: {
           name: name ? ILike(`%${name}%`) : undefined,
           status: status ?? undefined,
@@ -47,8 +51,12 @@ export class LocationService {
         order: {
           name: "ASC",
         },
+        skip: pageSize && pageIndex ? pageSize * pageIndex : undefined,
+        take: pageSize ?? undefined,
       });
-      return locationList;
+      let list = result[0];
+      let count = result[1];
+      return { list, count };
     } catch (err) {
       throw new Error(`Failed to get locations ${err.message}`);
     }

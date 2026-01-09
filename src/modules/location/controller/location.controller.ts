@@ -15,9 +15,16 @@ export class LocationController {
   @Get("list")
   public getLocationList(
     @Query("name") name: string,
-    @Query("status") status: string
+    @Query("status") status: string,
+    @Query("pageSize") pageSize: number,
+    @Query("pageIndex") pageIndex: number
   ) {
-    return this.locationService.getLocationList(name, status);
+    return this.locationService.getLocationList(
+      name,
+      status,
+      pageSize,
+      pageIndex
+    );
   }
 
   @Post("save")

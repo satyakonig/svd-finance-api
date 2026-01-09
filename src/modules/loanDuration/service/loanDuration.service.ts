@@ -27,23 +27,35 @@ export class LoanDurationService {
     return loanDuration;
   }
 
-  async getLoanDurationList(locationId: number, status: string) {
-    let loanDurationList: LoanDurationEntity[];
+  async getLoanDurationList(
+    locationId: number,
+    status: string,
+    pageSize: number,
+    pageIndex: number
+  ) {
     try {
-      loanDurationList = await this.loanDurationRepo.find({
-        where: {
-          status: status ?? undefined,
-          location: { id: locationId ?? undefined },
-        },
-        order: {
-          location: { id: "ASC" },
-        },
-        relations: ["location"],
-      });
+      let query = this.loanDurationRepo
+        .createQueryBuilder("loanDuration")
+        .select([
+          "loanDuration.id AS id",
+          "loanDuration.durationType AS durationtype",
+          "loanDuration.durationValue AS durationValue",
+          "loanDuration.intrest AS intrest",
+          "location.name AS locationname",
+        ])
+        .leftJoin("loanDuration.location", "location")
+        .where("loanDuration.status = :status", { status })
+        .andWhere("location.id = :locationId", { locationId })
+        .offset(pageSize * pageIndex)
+        .limit(pageSize)
+        .orderBy("loanDuration.durationType", "ASC");
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
+      return { list, count };
     } catch (err) {
       throw new Error(`Failed to get loan durations ${err.message}`);
     }
-    return loanDurationList;
   }
 
   public async saveOrUpdateLoanDuration(loanDuration: LoanDurationDto) {
@@ -64,13 +76,26 @@ export class LoanDurationService {
         LoanDurationDto.toEntity(loanDuration)
       );
 
+      let saveOrUpdatedLoanDurationWithRelations = await this.loanDurationRepo
+        .createQueryBuilder("loanDuration")
+        .select([
+          "loanDuration.id AS id",
+          "loanDuration.durationType AS durationtype",
+          "loanDuration.durationValue AS durationValue",
+          "loanDuration.intrest AS intrest",
+          "location.name AS locationname",
+        ])
+        .leftJoin("loanDuration.location", "location")
+        .where("loanDuration.id =:id", { id: saveOrUpdatedLoanDuration?.id })
+        .getRawOne();
+
       return {
         successMessage: reponseGenerator(
           "Duration",
           loanDuration?.id,
           loanDuration?.status
         ),
-        result: saveOrUpdatedLoanDuration,
+        result: saveOrUpdatedLoanDurationWithRelations,
       };
     } catch (error) {
       throw new Error(

@@ -16,9 +16,17 @@ export class AreaController {
   public getAreaList(
     @Query("name") name: any,
     @Query("status") status: any,
-    @Query("locationId") locationId: any
+    @Query("locationId") locationId: any,
+    @Query("pageSize") pageSize: number,
+    @Query("pageIndex") pageIndex: number
   ) {
-    return this.areaService.getAreaList(name, status, locationId);
+    return this.areaService.getAreaList(
+      name,
+      status,
+      locationId,
+      pageSize,
+      pageIndex
+    );
   }
 
   @Post("save")

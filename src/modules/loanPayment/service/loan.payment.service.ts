@@ -16,39 +16,38 @@ export class LoanPaymentService {
 
   public async saveOrUpdatePayment(loanPayment: LoanPaymentEntity) {
     const queryRunner = this.dataSource.createQueryRunner();
+
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const { loan, ...payload } = loanPayment;
-      let savedPayment: LoanPaymentEntity;
-      let updatedBalanceAmount: number;
-      let prevPayment: LoanPaymentEntity;
+      const { loan, amount, paymentDate } = loanPayment;
 
-      if (payload?.id) {
-        prevPayment = await this.loanPaymentRepo.findOne({
-          where: {
-            id: payload?.id ?? undefined,
-          },
-        });
-        const balanceAmountDiff = prevPayment.amount - Number(payload.amount);
+      const prevPayment = await queryRunner.manager.findOne(LoanPaymentEntity, {
+        where: {
+          paymentDate,
+          loan: { id: loan.id },
+        },
+      });
 
-        updatedBalanceAmount = loan?.balanceAmount + balanceAmountDiff;
-        loan.balanceAmount = updatedBalanceAmount;
-      } else {
-        updatedBalanceAmount = loan?.balanceAmount - loanPayment?.amount;
-        loan.balanceAmount = updatedBalanceAmount;
+      let updatedBalance = loan.balanceAmount;
+
+      if (prevPayment) {
+        // revert old payment and apply new payment
+        updatedBalance += prevPayment.amount;
       }
+
+      updatedBalance -= Number(amount);
+      loan.balanceAmount = updatedBalance;
 
       await queryRunner.manager.save(LoanEntity, loan);
 
-      savedPayment = await queryRunner.manager.save(
+      const savedPayment = await queryRunner.manager.save(
         LoanPaymentEntity,
-        loanPayment
+        prevPayment ? { ...prevPayment, ...loanPayment } : loanPayment
       );
 
       await queryRunner.commitTransaction();
-
       return savedPayment;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -59,10 +58,10 @@ export class LoanPaymentService {
   }
 
   public async getPayment(loanId: any, date: any) {
-    let payments: LoanPaymentEntity[];
+    let payments = {};
 
     try {
-      payments = await this.loanPaymentRepo.find({
+      payments = await this.loanPaymentRepo.findOne({
         where: {
           loan: { id: loanId ?? undefined },
           paymentDate: date ?? undefined,
@@ -74,5 +73,31 @@ export class LoanPaymentService {
     }
 
     return payments;
+  }
+
+  public async getPaymentsList(loanId: any) {
+    let payments: LoanPaymentEntity[];
+
+    try {
+      payments = await this.loanPaymentRepo
+        .createQueryBuilder("loanPayment")
+        .select([
+          "loanPayment.id AS id",
+          "loanPayment.paymentDate AS paymentdate",
+          "loanPayment.paymentMode AS paymentmode",
+          "loanPayment.amount AS amount",
+          "loanPayment.status AS status",
+          "agent.name AS agentname",
+        ])
+        .leftJoin("loanPayment.agentLocation", "agentLocation")
+        .leftJoin("loanPayment.loan", "loan")
+        .leftJoin("agentLocation.agent", "agent")
+        .where("loan.id = :loanId", { loanId })
+        .getRawMany();
+
+      return payments;
+    } catch (err) {
+      throw new Error(`Failed to get payment list - ${err}`);
+    }
   }
 }
