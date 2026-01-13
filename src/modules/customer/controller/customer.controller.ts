@@ -18,6 +18,7 @@ export class CustomerController {
     @Query("mobileNo") mobileNo: any,
     @Query("status") status: any,
     @Query("locationId") locationId: any,
+    @Query("phaseId") phaseId: any,
     @Query("pageIndex") pageIndex: any,
     @Query("pageSize") pageSize: any
   ) {
@@ -26,6 +27,7 @@ export class CustomerController {
       mobileNo,
       status,
       locationId,
+      phaseId,
       pageIndex,
       pageSize
     );
@@ -34,5 +36,13 @@ export class CustomerController {
   @Post("save")
   public saveOrUpdateCustomerAndLoan(@Body() payload: any) {
     return this.customerService.saveOrUpdateCustomerAndLoan(payload);
+  }
+
+  @Get("generateSerialNo")
+  public generateSerialNo(
+    @Query("locationId") locationId: any,
+    @Query("phaseId") phaseId: any
+  ) {
+    return this.customerService.generateSerialNo(locationId, phaseId);
   }
 }

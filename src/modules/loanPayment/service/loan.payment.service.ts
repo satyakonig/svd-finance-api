@@ -58,21 +58,18 @@ export class LoanPaymentService {
   }
 
   public async getPayment(loanId: any, date: any) {
-    let payments = {};
-
     try {
-      payments = await this.loanPaymentRepo.findOne({
+      let payment = await this.loanPaymentRepo.findOne({
         where: {
           loan: { id: loanId ?? undefined },
           paymentDate: date ?? undefined,
         },
         relations: ["agentLocation", "agentLocation.agent"],
       });
+      return payment ?? {};
     } catch (err) {
       throw new Error(`Failed to get payment list - ${err}`);
     }
-
-    return payments;
   }
 
   public async getPaymentsList(loanId: any) {
@@ -93,6 +90,7 @@ export class LoanPaymentService {
         .leftJoin("loanPayment.loan", "loan")
         .leftJoin("agentLocation.agent", "agent")
         .where("loan.id = :loanId", { loanId })
+        .orderBy("loanPayment.paymentDate", "DESC")
         .getRawMany();
 
       return payments;

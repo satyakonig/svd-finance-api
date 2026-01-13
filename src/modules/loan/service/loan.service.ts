@@ -4,14 +4,13 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { LoanDto } from "../../models/dto/loan.dto";
 import { LoanEntity } from "../../models/entity/loan.entity";
-import { Long, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { LoanPaymentEntity } from "../../models/entity/loan-payment.entity";
 import { SpentEntity } from "../../models/entity/spent.entity";
 import { LocationEntity } from "../../models/entity/location.entity";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
 import { error } from "console";
-import { number } from "joi";
 
 @Injectable()
 export class LoanService {
@@ -55,14 +54,16 @@ export class LoanService {
         query.leftJoinAndSelect("loan.payments", "payments");
         query
           .leftJoinAndSelect("payments.agentLocation", "paymentAgentLocation")
-          .leftJoinAndSelect("paymentAgentLocation.agent", "paymentAgent");
+          .leftJoinAndSelect("paymentAgentLocation.agent", "paymentAgent")
+          .addOrderBy("payments.paymentDate", "DESC");
       }
 
       if (fines) {
         query.leftJoinAndSelect("loan.fines", "fines");
         query
           .leftJoinAndSelect("fines.agentLocation", "fineAgentLocation")
-          .leftJoinAndSelect("fineAgentLocation.agent", "fineAgent");
+          .leftJoinAndSelect("fineAgentLocation.agent", "fineAgent")
+          .addOrderBy("fines.fineDate", "DESC");
       }
 
       let loan = await query.getOne();
@@ -109,7 +110,7 @@ export class LoanService {
           "loan.loanDate AS loanDate",
           "loan.payableAmount AS payableamount",
           "loan.balanceAmount AS balanceAmount",
-          "loan.label AS label",
+          "customer.label AS label",
           "customer.name AS name",
           "customer.mobileNo AS mobileno",
           "area.name AS areaname",
@@ -237,7 +238,7 @@ export class LoanService {
       if (locationId)
         query.andWhere("location.id = :locationId", { locationId });
       if (label)
-        query.andWhere("loan.label ILIKE :label", {
+        query.andWhere("customer.label ILIKE :label", {
           label: `%${label}%`,
         });
 
@@ -286,7 +287,7 @@ export class LoanService {
       if (locationId)
         countQuery.andWhere("location.id = :locationId", { locationId });
       if (label)
-        countQuery.andWhere("loan.label ILIKE :label", {
+        countQuery.andWhere("customer.label ILIKE :label", {
           label: `%${label}%`,
         });
 
@@ -537,25 +538,6 @@ export class LoanService {
     };
   }
 
-  public async generateSerialNo(locationId: any, phaseId: any) {
-    let serialNo;
-    try {
-      serialNo = await this.loanRepo
-        .createQueryBuilder("loan")
-        .leftJoin("loan.agentLocation", "agentLocation")
-        .leftJoin("agentLocation.location", "location")
-        .leftJoin("agentLocation.phase", "phase")
-        .select("COALESCE(MAX(CAST(loan.label AS INTEGER)), 0) + 1", "count")
-        .where("location.id = :locationId", { locationId })
-        .andWhere("phase.id = :phaseId", { phaseId })
-        .getRawOne();
-    } catch (err) {
-      throw error(`Failed to generate serial no ${err}`);
-    }
-
-    return serialNo;
-  }
-
   public async getLoansHistory(customerId: number) {
     try {
       let loans = await this.loanRepo
@@ -576,6 +558,7 @@ export class LoanService {
         .leftJoin("loan.customer", "customer")
         .leftJoin("loan.loanDuration", "loanDuration")
         .where("customer.id = :customerId", { customerId })
+        .orderBy("loan.loanDate", "DESC")
         .getRawMany();
 
       return loans;

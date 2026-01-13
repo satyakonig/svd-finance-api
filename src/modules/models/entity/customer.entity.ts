@@ -1,9 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { AreaEntity } from "./area.entity";
+import { AgentLocationEntity } from "./agent.location.entity";
 
 @Entity({ name: "customer_mst_tbl" })
 export class CustomerEntity extends BaseEntity {
+  @Column({ name: "LABEL", type: "varchar", length: 50, default: null })
+  label: string;
+
   @Column({ name: "NAME", type: "varchar", length: 50, default: null })
   name: string;
 
@@ -16,4 +20,11 @@ export class CustomerEntity extends BaseEntity {
   @ManyToOne((type) => AreaEntity, (areaEntity) => areaEntity.id)
   @JoinColumn({ name: "AREA_ID" })
   area: AreaEntity;
+
+  @ManyToOne(
+    (type) => AgentLocationEntity,
+    (agentLocationEntity) => agentLocationEntity.id
+  )
+  @JoinColumn({ name: "AGENT_LOCATION_ID" })
+  agentLocation: AgentLocationEntity;
 }

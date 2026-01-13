@@ -48,9 +48,12 @@ export class AreaService {
         .where(name ? "area.name =:name" : "1=1", { name: `%${name}%` })
         .andWhere("area.status =:status", { status })
         .andWhere("location.id =:locationId", { locationId })
-        .offset(pageSize * pageIndex)
-        .limit(pageSize)
         .orderBy("area.name", "ASC");
+
+      if (pageSize && pageIndex) {
+        query.offset(pageSize * pageIndex);
+        query.limit(pageSize);
+      }
 
       let list = await query.getRawMany();
       let count = await query.getCount();

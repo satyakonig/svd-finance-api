@@ -46,9 +46,12 @@ export class LoanDurationService {
         .leftJoin("loanDuration.location", "location")
         .where("loanDuration.status = :status", { status })
         .andWhere("location.id = :locationId", { locationId })
-        .offset(pageSize * pageIndex)
-        .limit(pageSize)
         .orderBy("loanDuration.durationType", "ASC");
+
+      if (pageSize && pageIndex) {
+        query.offset(pageSize * pageIndex);
+        query.limit(pageSize);
+      }
 
       let list = await query.getRawMany();
       let count = await query.getCount();

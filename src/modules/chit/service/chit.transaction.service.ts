@@ -39,10 +39,12 @@ export class ChitTransactionService {
         .createQueryBuilder("chitTransaction")
         .select([
           "chitTransaction.id AS id",
+          "chitTransaction.status AS status",
           "chitTransaction.description AS description",
           "chitTransaction.type AS type",
           "chitTransaction.date AS date",
           "chitTransaction.amount AS amount",
+          "agentLocation.id AS agentlocationid",
           "agent.name AS agentname",
         ])
         .leftJoin("chitTransaction.agentLocation", "agentLocation")
@@ -79,10 +81,12 @@ export class ChitTransactionService {
         .leftJoin("agentLocation.agent", "agent")
         .select([
           "chitTransaction.id AS id",
+          "chitTransaction.status AS status",
           "chitTransaction.description AS description",
           "chitTransaction.type AS type",
           "chitTransaction.date AS date",
           "chitTransaction.amount AS amount",
+          "agentLocation.id AS agentlocationid",
           "agent.name AS agentname",
         ])
         .where("chitTransaction.id =:id", { id: savedChitTransaction?.id })

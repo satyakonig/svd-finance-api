@@ -48,8 +48,10 @@ export class SpentService {
         .createQueryBuilder("spent")
         .select([
           "spent.id AS id",
+          "spent.status AS status",
           "spent.expenseDescription AS expensedescription",
           "spent.amount AS amount",
+          "agentLocation.id AS agentlocationid",
           "agent.name AS agentname",
         ])
         .leftJoin("spent.agentLocation", "agentLocation")
@@ -83,13 +85,15 @@ export class SpentService {
         .createQueryBuilder("spent")
         .select([
           "spent.id AS id",
+          "spent.status AS status",
           "spent.expenseDescription AS expensedescription",
           "spent.amount AS amount",
+          "agentLocation.id AS agentlocationid",
           "agent.name AS agentname",
         ])
         .leftJoin("spent.agentLocation", "agentLocation")
         .leftJoin("agentLocation.agent", "agent")
-        .where("spent.id =:id", { id: saveOrUpdatedSpent })
+        .where("spent.id =:id", { id: saveOrUpdatedSpent?.id })
         .getRawOne();
 
       return {

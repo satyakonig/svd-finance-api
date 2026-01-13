@@ -15,9 +15,6 @@ import { FineEntity } from "./fine.entity";
 
 @Entity({ name: "loan_mst_tbl" })
 export class LoanEntity extends BaseEntity {
-  @Column({ name: "LABEL", type: "varchar", length: 50, default: null })
-  label: string;
-
   @Column({ name: "LOAN_AMOUNT", type: "float", default: null })
   loanAmount: number;
 

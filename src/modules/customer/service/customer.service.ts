@@ -33,6 +33,7 @@ export class CustomerService {
     mobileNo: any,
     status: any,
     locationId: any,
+    phaseId: any,
     pageIndex: number = 0,
     pageSize: number = 10
   ) {
@@ -44,20 +45,26 @@ export class CustomerService {
         .createQueryBuilder("customer")
         .select([
           "customer.id AS id",
+          "customer.label AS label",
           "customer.gender AS gender",
           "customer.mobileNo AS mobileno",
           "customer.name AS name",
           "customer.status AS status",
           "area.name AS areaname",
+          "agent.name AS agentName",
         ])
         .leftJoin("customer.area", "area")
-        .leftJoin("area.location", "location")
+        .leftJoin("customer.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.phase", "phase")
         .where(name ? "customer.name =:name" : "1=1", { name: `%${name}%` })
         .andWhere(mobileNo ? "customer.mobileNo =:mobileNo" : "1=1", {
           mobileNo,
         })
         .andWhere("customer.status =:status", { status })
         .andWhere("location.id =:locationId", { locationId })
+        .andWhere("phase.id =:phaseId", { phaseId })
         .orderBy("name", "ASC")
         .offset(skip)
         .limit(take);
@@ -72,7 +79,6 @@ export class CustomerService {
   }
 
   public async saveOrUpdateCustomerAndLoan(payload: any) {
-    let savedCustomer;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -80,7 +86,29 @@ export class CustomerService {
     try {
       const { customer, loan } = payload;
 
-      savedCustomer = await queryRunner.manager.save(CustomerEntity, customer);
+      let savedCustomer = await queryRunner.manager.save(
+        CustomerEntity,
+        customer
+      );
+
+      const savedCustomerWithRelations = await queryRunner.manager
+        .createQueryBuilder(CustomerEntity, "customer")
+        .select([
+          "customer.id AS id",
+          "customer.label AS label",
+          "customer.gender AS gender",
+          "customer.mobileNo AS mobileno",
+          "customer.name AS name",
+          "customer.status AS status",
+          "area.name AS areaname",
+          "agent.name AS agentName",
+        ])
+        .leftJoin("customer.area", "area")
+        .leftJoin("customer.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.agent", "agent")
+        .where("customer.id = :id", { id: savedCustomer?.id })
+        .getRawOne();
+
       if (loan) {
         loan.customer = savedCustomer;
         await queryRunner.manager.save(LoanEntity, loan);
@@ -94,7 +122,7 @@ export class CustomerService {
           payload?.customer?.id,
           payload?.customer?.status
         ),
-        result: savedCustomer,
+        result: savedCustomerWithRelations,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -102,5 +130,27 @@ export class CustomerService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  public async generateSerialNo(locationId: any, phaseId: any) {
+    let serialNo;
+    try {
+      serialNo = await this.customerRepo
+        .createQueryBuilder("customer")
+        .leftJoin("customer.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.phase", "phase")
+        .select(
+          "COALESCE(MAX(CAST(customer.label AS INTEGER)), 0) + 1",
+          "count"
+        )
+        .where("location.id = :locationId", { locationId })
+        .andWhere("phase.id = :phaseId", { phaseId })
+        .getRawOne();
+    } catch (err) {
+      throw new Error(`Failed to generate serial no ${err}`);
+    }
+
+    return serialNo;
   }
 }

@@ -80,14 +80,6 @@ export class LoanController {
     return this.loanService.getTotalAmountReport(date, phaseId, locationId);
   }
 
-  @Get("generateSerialNo")
-  public generateSerialNo(
-    @Query("locationId") locationId: any,
-    @Query("phaseId") phaseId: any
-  ) {
-    return this.loanService.generateSerialNo(locationId, phaseId);
-  }
-
   @Get("history")
   public getLoansHistory(@Query("customerId") customerId: number) {
     return this.loanService.getLoansHistory(customerId);

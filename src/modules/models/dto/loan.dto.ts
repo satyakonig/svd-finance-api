@@ -7,7 +7,6 @@ import { CustomerDto } from "./customer.dto";
 import { LoanDurationDto } from "./loanDuration.dto";
 
 export class LoanDto extends BaseDto {
-  label: string;
   loanAmount: number;
   payableAmount: number;
   balanceAmount: number;
