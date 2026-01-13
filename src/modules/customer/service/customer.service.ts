@@ -52,6 +52,7 @@ export class CustomerService {
           "customer.status AS status",
           "area.name AS areaname",
           "agent.name AS agentName",
+          "agentLocation.id AS agentlocationid",
         ])
         .leftJoin("customer.area", "area")
         .leftJoin("customer.agentLocation", "agentLocation")
@@ -102,6 +103,7 @@ export class CustomerService {
           "customer.status AS status",
           "area.name AS areaname",
           "agent.name AS agentName",
+          "agentLocation.id AS agentlocationid",
         ])
         .leftJoin("customer.area", "area")
         .leftJoin("customer.agentLocation", "agentLocation")
