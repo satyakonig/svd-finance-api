@@ -10,9 +10,10 @@ async function bootstrap() {
 
   // Enable CORS for all origins
   app.enableCors({
-    origin: "*",
+    origin: "https://svd-finance-ui.onrender.com",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   });
 
   app.use(bodyParser.json({ limit: "50mb" }));
