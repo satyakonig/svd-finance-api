@@ -26,7 +26,7 @@ export class LoanService {
     @InjectRepository(BFEntity)
     private bfRepo: Repository<BFEntity>,
     @InjectRepository(FineEntity)
-    private fineRepo: Repository<FineEntity>
+    private fineRepo: Repository<FineEntity>,
   ) {}
 
   public async getLoan(
@@ -35,13 +35,15 @@ export class LoanService {
     customerId: number,
     paymentDate: string,
     payments: boolean,
-    fines: boolean
+    fines: boolean,
   ) {
     try {
       let query = this.loanRepo
         .createQueryBuilder("loan")
         .leftJoinAndSelect("loan.loanDuration", "loanDuration")
         .leftJoinAndSelect("loan.agentLocation", "agentLocation")
+        .leftJoinAndSelect("agentLocation.location", "location")
+        .leftJoinAndSelect("agentLocation.phase", "phase")
         .leftJoinAndSelect("loan.customer", "customer")
         .leftJoinAndSelect("customer.area", "area")
         .where(id ? "loan.id = :id" : "1=1", { id })
@@ -85,7 +87,7 @@ export class LoanService {
     paymentStatus: any,
     pageIndex: number,
     pageSize: number,
-    locationId: number
+    locationId: number,
   ) {
     try {
       /* ===================== VALIDATION ===================== */
@@ -133,7 +135,7 @@ export class LoanService {
           LoanPaymentEntity,
           "payment",
           "payment.loan = loan.id AND DATE(payment.paymentDate) = :date",
-          { date }
+          { date },
         );
       }
 
@@ -149,7 +151,7 @@ export class LoanService {
             AND p."AMOUNT" != 0
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -162,7 +164,7 @@ export class LoanService {
             AND DATE(p."PAYMENT_DATE") = :date
         )
         `,
-          { date }
+          { date },
         );
         query.andWhere("loan.loanDate != :date", { date });
       }
@@ -177,7 +179,7 @@ export class LoanService {
             AND p."AMOUNT" = 0
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -212,7 +214,7 @@ export class LoanService {
           (loan.payableAmount - loan.balanceAmount)
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -303,7 +305,7 @@ export class LoanService {
             AND p."AMOUNT" != 0
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -316,7 +318,7 @@ export class LoanService {
             AND DATE(p."PAYMENT_DATE") = :date
         )
         `,
-          { date }
+          { date },
         );
         countQuery.andWhere("loan.loanDate != :date", { date });
       }
@@ -331,7 +333,7 @@ export class LoanService {
             AND p."AMOUNT" = 0
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -366,7 +368,7 @@ export class LoanService {
           (loan.payableAmount - loan.balanceAmount)
         )
         `,
-          { date }
+          { date },
         );
       }
 
@@ -470,7 +472,7 @@ export class LoanService {
           fines,
           bf,
         };
-      })
+      }),
     );
 
     return reportList;
@@ -510,7 +512,7 @@ export class LoanService {
       .select("SUM(loan.loanAmount)", "totalPayment")
       .addSelect(
         "SUM(loan.payableAmount) - SUM(loan.loanAmount)",
-        "totalIntrest"
+        "totalIntrest",
       )
       .where("location.id = :locationId", { locationId })
       .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })

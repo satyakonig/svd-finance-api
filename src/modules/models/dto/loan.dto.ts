@@ -12,8 +12,6 @@ export class LoanDto extends BaseDto {
   balanceAmount: number;
   loanDate: Date;
   repayDate: Date;
-  surety: string;
-  suretyMobileNo: string;
   loanDuration: LoanDurationDto;
   customer: CustomerDto;
   agentLocation: AgentLocationDto;

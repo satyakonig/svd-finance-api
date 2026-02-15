@@ -9,6 +9,8 @@ export class CustomerDto extends BaseDto {
   mobileNo: string;
   gender: string;
   area: AreaDto;
+  surety: string;
+  suretyMobileNo: string;
   agentLocation: AgentLocationEntity;
 
   public static fromEntity(customerEntity: CustomerEntity): CustomerDto {

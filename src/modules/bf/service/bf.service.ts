@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { LessThan, Repository } from "typeorm";
+import { Equal, LessThan, Repository } from "typeorm";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { BFDto } from "../../models/dto/bf.dto";
 import { LoanEntity } from "../../models/entity/loan.entity";
@@ -30,7 +30,7 @@ export class BFService {
     @InjectRepository(LocationEntity)
     private locationRepo: Repository<LocationEntity>,
     @InjectRepository(ChitTransactionEntity)
-    private chitTransactionRepo: Repository<ChitTransactionEntity>
+    private chitTransactionRepo: Repository<ChitTransactionEntity>,
   ) {}
 
   async getBFList(
@@ -40,12 +40,14 @@ export class BFService {
     phaseId: any,
     locationId: any,
     pageIndex: number = 0,
-    pageSize: number = 10
+    pageSize: number = 10,
   ) {
     try {
       let query = this.bfRepo
         .createQueryBuilder("bf")
         .select([
+          "bf.id AS id",
+          "bf.status AS status",
           "bf.bfDate AS bfdate",
           "bf.previousBf AS previousbf",
           "bf.collectionTotal AS collectiontotal",
@@ -60,6 +62,8 @@ export class BFService {
           "bf.bfType AS bftype",
           "bf.addedFrom AS addedfrom",
           "bf.transferedTo AS transferedto",
+          "bf.chitInstallment AS chitinstallment",
+          "bf.chitWithdraw AS chitwithdraw",
           "agent.name AS agentname",
           "location.name AS locationname",
           "phase.name AS phasename",
@@ -77,9 +81,9 @@ export class BFService {
           fromDate && toDate
             ? "bf.bfDate BETWEEN :fromDate AND :toDate"
             : "1=1",
-          { fromDate, toDate }
+          { fromDate, toDate },
         )
-        .orderBy("bf.id", "DESC")
+        .orderBy("bf.id", "ASC")
         .skip(pageIndex * pageSize)
         .take(pageSize);
 
@@ -96,18 +100,37 @@ export class BFService {
     try {
       let savedBF = await this.bfRepo.save(BFDto.toEntity(bf));
 
-      let savedBfWithRelations = await this.bfRepo.findOne({
-        where: {
-          id: savedBF?.id ?? undefined,
-        },
-        relations: [
-          "agentLocation",
-          "agentLocation.day",
-          "agentLocation.location",
-          "agentLocation.phase",
-          "agentLocation.agent",
-        ],
-      });
+      let savedBfWithRelations = await this.bfRepo
+        .createQueryBuilder("bf")
+        .select([
+          "bf.id AS id",
+          "bf.status AS status",
+          "bf.bfDate AS bfdate",
+          "bf.previousBf AS previousbf",
+          "bf.collectionTotal AS collectiontotal",
+          "bf.finesTotal AS finestotal",
+          "bf.paymentTotal AS paymenttotal",
+          "bf.spentTotal AS spenttotal",
+          "bf.interestTotal AS interesttotal",
+          "bf.bf AS bf",
+          "bf.finalBf AS finalBf",
+          "bf.addedAmount AS addedamount",
+          "bf.transferedAmount AS transferedamount",
+          "bf.bfType AS bftype",
+          "bf.addedFrom AS addedfrom",
+          "bf.transferedTo AS transferedto",
+          "bf.chitInstallment AS chitinstallment",
+          "bf.chitWithdraw AS chitwithdraw",
+          "agent.name AS agentname",
+          "location.name AS locationname",
+          "phase.name AS phasename",
+        ])
+        .leftJoin("bf.agentLocation", "agentLocation")
+        .leftJoin("agentLocation.location", "location")
+        .leftJoin("agentLocation.agent", "agent")
+        .leftJoin("agentLocation.phase", "phase")
+        .where("bf.id = :id", { id: savedBF?.id })
+        .getRawOne();
 
       return {
         successMessage: reponseGenerator("BF", bf?.id, bf?.status),
@@ -122,7 +145,7 @@ export class BFService {
     date: string,
     phaseId: number,
     locationId: number,
-    regenerate: boolean
+    regenerate: boolean,
   ) {
     // --- 1. Fetch existing BF if present ---
     const existingBf = await this.bfRepo.findOne({
@@ -150,16 +173,23 @@ export class BFService {
 
     const uniquePhases = Number(phaseCountRaw?.uniquePhaseCount ?? 0);
 
-    // Get previous phase id
-    const previousPhaseId = getPhase(uniquePhases, phaseId);
+    // // Get previous phase id
+    // const previousPhaseId = getPhase(uniquePhases, phaseId);
 
     // --- 3. Fetch previous BF ---
     const previousBfRecord = await this.bfRepo.findOne({
       where: {
-        bfDate: LessThan(date),
+        bfDate:
+          uniquePhases > 1
+            ? Number(phaseId) === 1
+              ? LessThan(date)
+              : Equal(date)
+            : LessThan(date),
         agentLocation: {
           location: { id: locationId },
-          phase: { id: previousPhaseId },
+          phase: {
+            id: uniquePhases > 1 ? (Number(phaseId) === 1 ? 2 : 1) : phaseId,
+          },
         },
       },
       order: { bfDate: "DESC" },
@@ -232,10 +262,13 @@ export class BFService {
       .andWhere("phase.id = :phaseId", { phaseId })
       .getRawMany();
 
-    const formattedChitsRow = chitsRow?.reduce((acc, obj) => {
-      acc[obj?.type] = obj?.sum;
-      return acc;
-    }, {});
+    const formattedChitsRow = chitsRow?.reduce(
+      (acc, obj) => {
+        acc[obj?.type] = obj?.sum;
+        return acc;
+      },
+      { chitInstallment: 0, chitWithdraw: 0 },
+    );
 
     // Convert all sums to numeric
     const collectionTotal = Number(collectionRow?.sum ?? 0);
@@ -295,6 +328,8 @@ export class BFService {
         const bf = await this.bfRepo
           .createQueryBuilder("bf")
           .select([
+            "bf.id AS id",
+            "bf.status AS status",
             "bf.bfDate AS bfdate",
             "bf.previousBf AS previousbf",
             "bf.collectionTotal AS collectiontotal",
@@ -312,6 +347,8 @@ export class BFService {
             "agent.name AS agentname",
             "location.name AS locationname",
             "phase.name AS phasename",
+            "bf.chitInstallment AS chitinstallment",
+            "bf.chitWithdraw AS chitwithdraw",
           ])
           .leftJoin("bf.agentLocation", "agentLocation")
           .leftJoin("agentLocation.location", "location")
@@ -320,14 +357,14 @@ export class BFService {
           .where("location.id = :locationId", { locationId })
           .andWhere(date ? "bf.bfDate = :date" : "1=1", { date })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-          .getOne();
+          .getRawOne();
 
         return {
           id: locationId,
           name: locationName,
           bf,
         };
-      })
+      }),
     );
 
     return reportList;

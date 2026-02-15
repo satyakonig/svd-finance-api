@@ -21,9 +21,20 @@ export class CustomerEntity extends BaseEntity {
   @JoinColumn({ name: "AREA_ID" })
   area: AreaEntity;
 
+  @Column({ name: "SURETY", type: "varchar", length: 50, default: null })
+  surety: string;
+
+  @Column({
+    name: "SURETY_MOBILE_NO",
+    type: "varchar",
+    length: 10,
+    default: null,
+  })
+  suretyMobileNo: string;
+
   @ManyToOne(
     (type) => AgentLocationEntity,
-    (agentLocationEntity) => agentLocationEntity.id
+    (agentLocationEntity) => agentLocationEntity.id,
   )
   @JoinColumn({ name: "AGENT_LOCATION_ID" })
   agentLocation: AgentLocationEntity;

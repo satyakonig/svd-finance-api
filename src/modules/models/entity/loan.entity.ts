@@ -38,20 +38,9 @@ export class LoanEntity extends BaseEntity {
   })
   repayDate: Date;
 
-  @Column({ name: "SURETY", type: "varchar", length: 50, default: null })
-  surety: string;
-
-  @Column({
-    name: "SURETY_MOBILE_NO",
-    type: "varchar",
-    length: 10,
-    default: null,
-  })
-  suretyMobileNo: string;
-
   @ManyToOne(
     (type) => LoanDurationEntity,
-    (loanDurationEntity) => loanDurationEntity.id
+    (loanDurationEntity) => loanDurationEntity.id,
   )
   @JoinColumn({ name: "LOAN_DURATION" })
   loanDuration: LoanDurationEntity;
@@ -68,7 +57,7 @@ export class LoanEntity extends BaseEntity {
 
   @ManyToOne(
     (type) => AgentLocationEntity,
-    (agentLocationEntity) => agentLocationEntity.id
+    (agentLocationEntity) => agentLocationEntity.id,
   )
   @JoinColumn({ name: "AGENT_LOCATION_ID" })
   agentLocation: AgentLocationEntity;

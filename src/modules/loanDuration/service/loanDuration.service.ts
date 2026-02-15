@@ -9,7 +9,7 @@ import { reponseGenerator } from "../../../util/common";
 export class LoanDurationService {
   constructor(
     @InjectRepository(LoanDurationEntity)
-    private loanDurationRepo: Repository<LoanDurationEntity>
+    private loanDurationRepo: Repository<LoanDurationEntity>,
   ) {}
 
   async getLoanDuration(id: number) {
@@ -31,13 +31,14 @@ export class LoanDurationService {
     locationId: number,
     status: string,
     pageSize: number,
-    pageIndex: number
+    pageIndex: number,
   ) {
     try {
       let query = this.loanDurationRepo
         .createQueryBuilder("loanDuration")
         .select([
           "loanDuration.id AS id",
+          "loanDuration.status AS status",
           "loanDuration.durationType AS durationtype",
           "loanDuration.durationValue AS durationValue",
           "loanDuration.intrest AS intrest",
@@ -76,13 +77,14 @@ export class LoanDurationService {
         return { infoMessage: "Duration already exists" };
       }
       let saveOrUpdatedLoanDuration = await this.loanDurationRepo.save(
-        LoanDurationDto.toEntity(loanDuration)
+        LoanDurationDto.toEntity(loanDuration),
       );
 
       let saveOrUpdatedLoanDurationWithRelations = await this.loanDurationRepo
         .createQueryBuilder("loanDuration")
         .select([
           "loanDuration.id AS id",
+          "loanDuration.status AS status",
           "loanDuration.durationType AS durationtype",
           "loanDuration.durationValue AS durationValue",
           "loanDuration.intrest AS intrest",
@@ -96,13 +98,13 @@ export class LoanDurationService {
         successMessage: reponseGenerator(
           "Duration",
           loanDuration?.id,
-          loanDuration?.status
+          loanDuration?.status,
         ),
         result: saveOrUpdatedLoanDurationWithRelations,
       };
     } catch (error) {
       throw new Error(
-        `Failed to save or update loan duration ${error.message}`
+        `Failed to save or update loan duration ${error.message}`,
       );
     }
   }
