@@ -4,7 +4,7 @@ import { BaseDto } from "./base.dto";
 
 export class SpentDto extends BaseDto {
   expenseDescription: string;
-  paymentDate: Date;
+  date: Date;
   amount: number;
   agentLocation: AgentLocationDto;
 

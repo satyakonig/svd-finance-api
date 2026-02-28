@@ -9,7 +9,7 @@ import { reponseGenerator } from "../../../util/common";
 export class SpentService {
   constructor(
     @InjectRepository(SpentEntity)
-    private spentRepo: Repository<SpentEntity>
+    private spentRepo: Repository<SpentEntity>,
   ) {}
 
   async getSpent(id: number) {
@@ -41,7 +41,7 @@ export class SpentService {
     locationId: any,
     status: any,
     pageIndex: number,
-    pageSize: number
+    pageSize: number,
   ) {
     try {
       let query = this.spentRepo
@@ -60,7 +60,7 @@ export class SpentService {
         .leftJoin("agentLocation.phase", "phase")
         .where("location.id =:locationId", { locationId })
         .andWhere("phase.id =:phaseId", { phaseId })
-        .andWhere("spent.paymentDate =:date", { date })
+        .andWhere("spent.date =:date", { date })
         .andWhere("spent.status =:status", { status });
 
       if (pageIndex && pageSize) {

@@ -25,7 +25,7 @@ export class LoanPaymentEntity extends BaseEntity {
     type: "date",
     default: () => "CURRENT_DATE",
   })
-  paymentDate: Date;
+  date: Date;
 
   @ManyToOne((type) => LoanEntity, (loanEntity) => loanEntity.id)
   @JoinColumn({ name: "LOAN_ID" })
@@ -33,7 +33,7 @@ export class LoanPaymentEntity extends BaseEntity {
 
   @ManyToOne(
     (type) => AgentLocationEntity,
-    (agentLocationEntity) => agentLocationEntity.id
+    (agentLocationEntity) => agentLocationEntity.id,
   )
   @JoinColumn({ name: "AGENT_LOCATION_ID" })
   agentLocation: AgentLocationEntity;

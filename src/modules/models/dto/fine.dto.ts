@@ -6,7 +6,8 @@ import { LoanDto } from "./loan.dto";
 export class FineDto extends BaseDto {
   amount: number;
   paymentMode: string;
-  fineDate: Date;
+  receiverName: string;
+  date: Date;
   loan: LoanDto;
   agentLocation: AgentLocationDto;
 

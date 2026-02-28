@@ -13,7 +13,16 @@ export class FineController {
   }
 
   @Get("get")
-  public getPayment(@Query("loanId") loanId: any, @Query("date") date: any) {
-    return this.fine.getPayment(loanId, date);
+  public getPayment(
+    @Query("loanId") loanId: any,
+    @Query("paymentId") paymentId: any,
+    @Query("date") date: any,
+  ) {
+    return this.fine.getPayment(loanId, paymentId, date);
+  }
+
+  @Get("get/all")
+  public getPayments(@Query("loanId") loanId: any, @Query("date") date: any) {
+    return this.fine.getPayments(loanId, date);
   }
 }

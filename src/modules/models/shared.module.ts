@@ -15,6 +15,7 @@ import { DayEntity } from "./entity/day.entity";
 import { PhaseEntity } from "./entity/phase.entity";
 import { FineEntity } from "./entity/fine.entity";
 import { ChitTransactionEntity } from "./entity/chit.transaction.entity";
+import { RebateEntity } from "./entity/rebate.entity";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ChitTransactionEntity } from "./entity/chit.transaction.entity";
       PhaseEntity,
       FineEntity,
       ChitTransactionEntity,
+      RebateEntity,
     ]),
   ],
   exports: [TypeOrmModule],

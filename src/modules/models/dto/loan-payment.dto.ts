@@ -6,13 +6,13 @@ import { LoanDto } from "./loan.dto";
 export class LoanPaymentDto extends BaseDto {
   amount: number;
   paymentMode: string;
-  paymentDate: Date;
+  date: Date;
   loan: LoanDto;
   receiverName: string;
   agentLocation: AgentLocationDto;
 
   public static fromEntity(
-    loanPaymentEntity: LoanPaymentEntity
+    loanPaymentEntity: LoanPaymentEntity,
   ): LoanPaymentDto {
     if (!loanPaymentEntity) return null;
     const { ...loanPaymentObject } = loanPaymentEntity;

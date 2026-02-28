@@ -11,7 +11,7 @@ export class LoanPaymentService {
   constructor(
     @InjectRepository(LoanPaymentEntity)
     private loanPaymentRepo: Repository<LoanPaymentEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
 
   public async saveOrUpdatePayment(loanPayment: LoanPaymentEntity) {
@@ -21,11 +21,11 @@ export class LoanPaymentService {
     await queryRunner.startTransaction();
 
     try {
-      const { loan, amount, paymentDate } = loanPayment;
+      const { loan, amount, date } = loanPayment;
 
       const prevPayment = await queryRunner.manager.findOne(LoanPaymentEntity, {
         where: {
-          paymentDate,
+          date,
           loan: { id: loan.id },
         },
       });
@@ -44,7 +44,7 @@ export class LoanPaymentService {
 
       const savedPayment = await queryRunner.manager.save(
         LoanPaymentEntity,
-        prevPayment ? { ...prevPayment, ...loanPayment } : loanPayment
+        prevPayment ? { ...prevPayment, ...loanPayment } : loanPayment,
       );
 
       await queryRunner.commitTransaction();
@@ -62,7 +62,7 @@ export class LoanPaymentService {
       let payment = await this.loanPaymentRepo.findOne({
         where: {
           loan: { id: loanId ?? undefined },
-          paymentDate: date ?? undefined,
+          date: date ?? undefined,
         },
         relations: ["agentLocation", "agentLocation.agent"],
       });
@@ -80,7 +80,7 @@ export class LoanPaymentService {
         .createQueryBuilder("loanPayment")
         .select([
           "loanPayment.id AS id",
-          "loanPayment.paymentDate AS paymentdate",
+          "loanPayment.date AS paymentdate",
           "loanPayment.paymentMode AS paymentmode",
           "loanPayment.amount AS amount",
           "loanPayment.status AS status",
@@ -90,7 +90,7 @@ export class LoanPaymentService {
         .leftJoin("loanPayment.loan", "loan")
         .leftJoin("agentLocation.agent", "agent")
         .where("loan.id = :loanId", { loanId })
-        .orderBy("loanPayment.paymentDate", "DESC")
+        .orderBy("loanPayment.date", "DESC")
         .getRawMany();
 
       return payments;

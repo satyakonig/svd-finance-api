@@ -12,7 +12,7 @@ export class LoanController {
     @Query("id") id: number,
     @Query("status") status: string,
     @Query("customerId") customerId: number,
-    @Query("paymentDate") paymentDate: string,
+    @Query("date") date: string,
     @Query("payments") payments: boolean,
     @Query("fines") fines: boolean,
   ) {
@@ -20,7 +20,7 @@ export class LoanController {
       id,
       status,
       customerId,
-      paymentDate,
+      date,
       payments,
       fines,
     );

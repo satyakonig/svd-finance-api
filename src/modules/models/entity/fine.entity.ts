@@ -17,12 +17,15 @@ export class FineEntity extends BaseEntity {
   @Column({ name: "PAYMENT_MODE", type: "varchar", length: 20, default: null })
   paymentMode: string;
 
+  @Column({ name: "RECEIVER_NAME", type: "varchar", length: 30, default: null })
+  receiverName: string;
+
   @CreateDateColumn({
     name: "FINE_DATE",
     type: "date",
     default: () => "CURRENT_DATE",
   })
-  fineDate: Date;
+  date: Date;
 
   @ManyToOne((type) => LoanEntity, (loanEntity) => loanEntity.id)
   @JoinColumn({ name: "LOAN_ID" })
@@ -30,7 +33,7 @@ export class FineEntity extends BaseEntity {
 
   @ManyToOne(
     (type) => AgentLocationEntity,
-    (agentLocationEntity) => agentLocationEntity.id
+    (agentLocationEntity) => agentLocationEntity.id,
   )
   @JoinColumn({ name: "AGENT_LOCATION_ID" })
   agentLocation: AgentLocationEntity;

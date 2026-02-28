@@ -8,8 +8,23 @@ export class FineService {
   constructor(
     @InjectRepository(FineEntity)
     private fineRepo: Repository<FineEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
+
+  public async getPayments(loanId: any, date: any) {
+    try {
+      let payments: FineEntity[];
+      payments = await this.fineRepo.find({
+        where: {
+          loan: { id: loanId ?? undefined },
+          date: date ?? undefined,
+        },
+      });
+      return payments;
+    } catch (err) {
+      throw new Error(`Failed to get payment list - ${err}`);
+    }
+  }
 
   public async saveOrUpdatePayment(finePayment: FineEntity) {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -32,20 +47,19 @@ export class FineService {
     }
   }
 
-  public async getPayment(loanId: any, date: any) {
-    let payments: FineEntity[];
-
+  public async getPayment(loanId: any, paymentId: any, date: any) {
     try {
-      payments = await this.fineRepo.find({
+      let payments: FineEntity;
+      payments = await this.fineRepo.findOne({
         where: {
+          id: paymentId ?? undefined,
           loan: { id: loanId ?? undefined },
-          fineDate: date ?? undefined,
+          date: date ?? undefined,
         },
       });
+      return payments ?? {};
     } catch (err) {
       throw new Error(`Failed to get payment list - ${err}`);
     }
-
-    return payments;
   }
 }

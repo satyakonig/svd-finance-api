@@ -33,7 +33,7 @@ export class LoanService {
     id: number,
     status: string,
     customerId: number,
-    paymentDate: string,
+    date: string,
     payments: boolean,
     fines: boolean,
   ) {
@@ -57,7 +57,7 @@ export class LoanService {
         query
           .leftJoinAndSelect("payments.agentLocation", "paymentAgentLocation")
           .leftJoinAndSelect("paymentAgentLocation.agent", "paymentAgent")
-          .addOrderBy("payments.paymentDate", "DESC");
+          .addOrderBy("payments.date", "DESC");
       }
 
       if (fines) {
@@ -65,7 +65,7 @@ export class LoanService {
         query
           .leftJoinAndSelect("fines.agentLocation", "fineAgentLocation")
           .leftJoinAndSelect("fineAgentLocation.agent", "fineAgent")
-          .addOrderBy("fines.fineDate", "DESC");
+          .addOrderBy("fines.date", "DESC");
       }
 
       let loan = await query.getOne();
@@ -134,7 +134,7 @@ export class LoanService {
         query.leftJoin(
           LoanPaymentEntity,
           "payment",
-          "payment.loan = loan.id AND DATE(payment.paymentDate) = :date",
+          "payment.loan = loan.id AND DATE(payment.date) = :date",
           { date },
         );
       }
@@ -244,9 +244,7 @@ export class LoanService {
           label: `%${label}%`,
         });
 
-      query
-        .orderBy("loan.id", "DESC")
-        .addOrderBy("payment.paymentDate", "DESC");
+      query.orderBy("loan.id", "DESC").addOrderBy("payment.date", "DESC");
 
       if (pageIndex != null && pageSize != null) {
         query.offset(pageIndex * pageSize).limit(pageSize);
@@ -407,7 +405,7 @@ export class LoanService {
           .leftJoinAndSelect("agentLocation.agent", "agent")
           .leftJoinAndSelect("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
-          .andWhere(date ? "loanpayment.paymentDate = :date" : "1=1", { date })
+          .andWhere(date ? "loanpayment.date = :date" : "1=1", { date })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere("loanpayment.status = :status", { status: "ACTIVE" })
           .getMany();
@@ -421,7 +419,7 @@ export class LoanService {
           .where("location.id = :locationId", { locationId })
           .andWhere("spent.status = :status", { status: "ACTIVE" })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-          .andWhere(date ? "spent.paymentDate = :date" : "1=1", { date })
+          .andWhere(date ? "spent.date = :date" : "1=1", { date })
           .getMany();
 
         const payments = await this.loanRepo
@@ -459,7 +457,7 @@ export class LoanService {
           .leftJoinAndSelect("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-          .andWhere(date ? "fine.fineDate = :date" : "1=1", { date })
+          .andWhere(date ? "fine.date = :date" : "1=1", { date })
           .andWhere("fine.status = :status", { status: "ACTIVE" })
           .getMany();
 
@@ -486,7 +484,7 @@ export class LoanService {
       .leftJoin("agentLocation.phase", "phase")
       .select("SUM(loanpayment.amount)", "totalCollection")
       .where("location.id = :locationId", { locationId })
-      .andWhere(date ? "loanpayment.paymentDate = :date" : "1=1", { date })
+      .andWhere(date ? "loanpayment.date = :date" : "1=1", { date })
       .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
       .andWhere("loanpayment.status = :status", { status: "ACTIVE" })
       .getRawOne();
@@ -500,7 +498,7 @@ export class LoanService {
       .where("location.id = :locationId", { locationId })
       .andWhere("spent.status = :status", { status: "ACTIVE" })
       .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-      .andWhere(date ? "spent.paymentDate = :date" : "1=1", { date })
+      .andWhere(date ? "spent.date = :date" : "1=1", { date })
       .getRawOne();
 
     const payment = await this.loanRepo
@@ -528,7 +526,7 @@ export class LoanService {
       .select("SUM(fine.amount)", "totalFine")
       .where("location.id = :locationId", { locationId })
       .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
-      .andWhere(date ? "fine.fineDate = :date" : "1=1", { date })
+      .andWhere(date ? "fine.date = :date" : "1=1", { date })
       .andWhere("fine.status = :status", { status: "ACTIVE" })
       .getRawOne();
 

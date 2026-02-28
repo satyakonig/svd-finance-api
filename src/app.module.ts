@@ -20,6 +20,7 @@ import { LoanPaymentModule } from "./modules/loanPayment/loan.payment.module";
 import { PhaseModule } from "./modules/phase/phase.module";
 import { FineModule } from "./modules/fine/fine.module";
 import { ChitTransactionModule } from "./modules/chit/chit.transaction.module";
+import { RebateModule } from "./modules/rebate/rebate.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ChitTransactionModule } from "./modules/chit/chit.transaction.module";
     PhaseModule,
     FineModule,
     ChitTransactionModule,
+    RebateModule,
   ],
   controllers: [AppController],
   providers: [
