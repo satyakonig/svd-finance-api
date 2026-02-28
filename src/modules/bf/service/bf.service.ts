@@ -11,6 +11,7 @@ import { LocationEntity } from "../../models/entity/location.entity";
 import { AgentLocationEntity } from "../../models/entity/agent.location.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
 import { ChitTransactionEntity } from "../../models/entity/chit.transaction.entity";
+import { RebateEntity } from "../../models/entity/rebate.entity";
 
 @Injectable()
 export class BFService {
@@ -25,6 +26,8 @@ export class BFService {
     private spentRepo: Repository<SpentEntity>,
     @InjectRepository(FineEntity)
     private fineRepo: Repository<FineEntity>,
+    @InjectRepository(RebateEntity)
+    private rebateRepo: Repository<RebateEntity>,
     @InjectRepository(AgentLocationEntity)
     private agentLocationRepo: Repository<AgentLocationEntity>,
     @InjectRepository(LocationEntity)
@@ -55,6 +58,7 @@ export class BFService {
           "bf.paymentTotal AS paymenttotal",
           "bf.spentTotal AS spenttotal",
           "bf.interestTotal AS interesttotal",
+          "bf.rebateTotal AS rebatetotal",
           "bf.bf AS bf",
           "bf.finalBf AS finalBf",
           "bf.addedAmount AS addedamount",
@@ -112,6 +116,7 @@ export class BFService {
           "bf.paymentTotal AS paymenttotal",
           "bf.spentTotal AS spenttotal",
           "bf.interestTotal AS interesttotal",
+          "bf.rebatetotal AS rebatetotal",
           "bf.bf AS bf",
           "bf.finalBf AS finalBf",
           "bf.addedAmount AS addedamount",
@@ -224,6 +229,18 @@ export class BFService {
       .andWhere("phase.id = :phaseId", { phaseId })
       .getRawOne();
 
+    const rebateRow = await this.rebateRepo
+      .createQueryBuilder("rebate")
+      .leftJoin("rebate.agentLocation", "agentLocation")
+      .leftJoin("agentLocation.location", "location")
+      .leftJoin("agentLocation.phase", "phase")
+      .select("SUM(rebate.amount)", "sum")
+      .where("rebate.date = :date", { date })
+      .andWhere("rebate.status = :status", { status: "ACTIVE" })
+      .andWhere("location.id = :locationId", { locationId })
+      .andWhere("phase.id = :phaseId", { phaseId })
+      .getRawOne();
+
     const spentRow = await this.spentRepo
       .createQueryBuilder("spent")
       .leftJoin("spent.agentLocation", "agentLocation")
@@ -278,6 +295,7 @@ export class BFService {
     const finesTotal = Number(finesRow?.sum ?? 0);
     const chitsPay = Number(formattedChitsRow?.chitInstallment ?? 0);
     const chitsCollect = Number(formattedChitsRow?.chitWithdraw ?? 0);
+    const rebatesTotal = Number(rebateRow?.sum ?? 0);
 
     // --- 5. Final BF calculation ---
     const bf =
@@ -299,6 +317,7 @@ export class BFService {
       spentTotal,
       finesTotal,
       interestTotal,
+      rebatesTotal,
       ...formattedChitsRow,
       bf,
     };
@@ -337,6 +356,7 @@ export class BFService {
             "bf.paymentTotal AS paymenttotal",
             "bf.spentTotal AS spenttotal",
             "bf.interestTotal AS interesttotal",
+            "bf.rebatetotal AS rebatetotal",
             "bf.bf AS bf",
             "bf.finalBf AS finalBf",
             "bf.addedAmount AS addedamount",

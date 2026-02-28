@@ -9,6 +9,7 @@ export class BFDto extends BaseDto {
   paymentTotal: number;
   spentTotal: number;
   interestTotal: number;
+  rebateTotal: number;
   finesTotal: number;
   bf: number;
   addedAmount: number;

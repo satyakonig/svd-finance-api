@@ -12,6 +12,7 @@ import { LoanPaymentEntity } from "./loan-payment.entity";
 import { LoanDurationEntity } from "./loanDuration.entity";
 import { AgentLocationEntity } from "./agent.location.entity";
 import { FineEntity } from "./fine.entity";
+import { RebateEntity } from "./rebate.entity";
 
 @Entity({ name: "loan_mst_tbl" })
 export class LoanEntity extends BaseEntity {
@@ -24,7 +25,7 @@ export class LoanEntity extends BaseEntity {
   @Column({ name: "BALANCE_AMOUNT", type: "float", default: null })
   balanceAmount: number;
 
-  @Column({ name: "INTREST_REBATE", type: "float", default: null })
+  @Column({ name: "AMOUNT_REBATE", type: "float", default: null })
   amountRebate: number;
 
   @CreateDateColumn({
@@ -53,6 +54,9 @@ export class LoanEntity extends BaseEntity {
 
   @OneToMany(() => FineEntity, (fine) => fine.loan)
   fines: FineEntity[];
+
+  @OneToMany(() => RebateEntity, (rebate) => rebate.loan)
+  rebates: RebateEntity[];
 
   @ManyToOne((type) => CustomerEntity, (customerEntity) => customerEntity.id)
   @JoinColumn({ name: "CUSTOMER_ID" })

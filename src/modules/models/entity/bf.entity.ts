@@ -50,6 +50,13 @@ export class BFEntity extends BaseEntity {
   interestTotal: number;
 
   @Column({
+    name: "REBATE_TOTAL",
+    type: "int",
+    default: null,
+  })
+  rebateTotal: number;
+
+  @Column({
     name: "BF",
     type: "int",
     default: null,
@@ -117,7 +124,7 @@ export class BFEntity extends BaseEntity {
 
   @ManyToOne(
     (type) => AgentLocationEntity,
-    (agentLocationEntity) => agentLocationEntity.id
+    (agentLocationEntity) => agentLocationEntity.id,
   )
   @JoinColumn({ name: "AGENT_LOCATION_ID" })
   agentLocation: AgentLocationEntity;

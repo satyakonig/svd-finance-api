@@ -1,6 +1,7 @@
 import { FineEntity } from "../entity/fine.entity";
 import { LoanPaymentEntity } from "../entity/loan-payment.entity";
 import { LoanEntity } from "../entity/loan.entity";
+import { RebateEntity } from "../entity/rebate.entity";
 import { AgentLocationDto } from "./agent.location.dto";
 import { BaseDto } from "./base.dto";
 import { CustomerDto } from "./customer.dto";
@@ -18,6 +19,7 @@ export class LoanDto extends BaseDto {
   agentLocation: AgentLocationDto;
   payments: LoanPaymentEntity[];
   fines: FineEntity[];
+  rebates: RebateEntity[];
 
   public static fromEntity(loanEntity: LoanEntity): LoanDto {
     if (!loanEntity) return null;

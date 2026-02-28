@@ -36,6 +36,7 @@ export class LoanService {
     date: string,
     payments: boolean,
     fines: boolean,
+    rebates: boolean,
   ) {
     try {
       let query = this.loanRepo
@@ -66,6 +67,14 @@ export class LoanService {
           .leftJoinAndSelect("fines.agentLocation", "fineAgentLocation")
           .leftJoinAndSelect("fineAgentLocation.agent", "fineAgent")
           .addOrderBy("fines.date", "DESC");
+      }
+
+      if (rebates) {
+        query.leftJoinAndSelect("loan.rebates", "rebates");
+        query
+          .leftJoinAndSelect("rebates.agentLocation", "rebateAgentLocation")
+          .leftJoinAndSelect("rebateAgentLocation.agent", "rebateAgent")
+          .addOrderBy("rebates.date", "DESC");
       }
 
       let loan = await query.getOne();

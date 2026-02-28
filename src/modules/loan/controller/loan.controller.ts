@@ -15,6 +15,7 @@ export class LoanController {
     @Query("date") date: string,
     @Query("payments") payments: boolean,
     @Query("fines") fines: boolean,
+    @Query("rebates") rebates: boolean,
   ) {
     return this.loanService.getLoan(
       id,
@@ -23,6 +24,7 @@ export class LoanController {
       date,
       payments,
       fines,
+      rebates,
     );
   }
 
