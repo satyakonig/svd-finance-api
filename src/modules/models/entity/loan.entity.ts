@@ -24,6 +24,9 @@ export class LoanEntity extends BaseEntity {
   @Column({ name: "BALANCE_AMOUNT", type: "float", default: null })
   balanceAmount: number;
 
+  @Column({ name: "INTREST_REBATE", type: "float", default: null })
+  amountRebate: number;
+
   @CreateDateColumn({
     name: "LOAN_DATE",
     type: "date",

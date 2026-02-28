@@ -568,4 +568,24 @@ export class LoanService {
       throw error(`Failed to get customer history ${err}`);
     }
   }
+
+  public async getActiveLoanCheck(customerId: number) {
+    try {
+      if (!customerId) {
+        throw new Error("Customer Id is null");
+      }
+      let loan = await this.loanRepo.findOne({
+        where: {
+          customer: {
+            id: customerId,
+          },
+        },
+      });
+      if (loan?.id) {
+        return { exist: true };
+      }
+    } catch (err) {
+      throw new Error(`Failed to check loan - ${err.message || err}`);
+    }
+  }
 }

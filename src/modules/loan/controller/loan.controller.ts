@@ -14,7 +14,7 @@ export class LoanController {
     @Query("customerId") customerId: number,
     @Query("paymentDate") paymentDate: string,
     @Query("payments") payments: boolean,
-    @Query("fines") fines: boolean
+    @Query("fines") fines: boolean,
   ) {
     return this.loanService.getLoan(
       id,
@@ -22,7 +22,7 @@ export class LoanController {
       customerId,
       paymentDate,
       payments,
-      fines
+      fines,
     );
   }
 
@@ -39,7 +39,7 @@ export class LoanController {
     @Query("paymentStatus") paymentStatus: any,
     @Query("pageIndex") pageIndex: any,
     @Query("pageSize") pageSize: any,
-    @Query("locationId") locationId: number
+    @Query("locationId") locationId: number,
   ) {
     return this.loanService.getLoanList(
       loanId,
@@ -53,7 +53,7 @@ export class LoanController {
       paymentStatus,
       pageIndex,
       pageSize,
-      locationId
+      locationId,
     );
   }
 
@@ -66,7 +66,7 @@ export class LoanController {
   public getReport(
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
-    @Query("locationId") locationId: any
+    @Query("locationId") locationId: any,
   ) {
     return this.loanService.getReport(date, phaseId, locationId);
   }
@@ -75,7 +75,7 @@ export class LoanController {
   public getTotalAmountReport(
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
-    @Query("locationId") locationId: any
+    @Query("locationId") locationId: any,
   ) {
     return this.loanService.getTotalAmountReport(date, phaseId, locationId);
   }
@@ -83,5 +83,10 @@ export class LoanController {
   @Get("history")
   public getLoansHistory(@Query("customerId") customerId: number) {
     return this.loanService.getLoansHistory(customerId);
+  }
+
+  @Get("active/check")
+  public getActiveLoanCheck(@Query("customerId") customerId: number) {
+    return this.loanService.getActiveLoanCheck(customerId);
   }
 }
