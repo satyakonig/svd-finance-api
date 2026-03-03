@@ -7,6 +7,7 @@ export class CustomerDto extends BaseDto {
   name: string;
   label: string;
   mobileNo: string;
+  alternateMobileNo: string;
   gender: string;
   area: AreaDto;
   surety: string;

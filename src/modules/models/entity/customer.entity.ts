@@ -14,6 +14,14 @@ export class CustomerEntity extends BaseEntity {
   @Column({ name: "MOBILE_NO", type: "varchar", length: 10, default: null })
   mobileNo: string;
 
+  @Column({
+    name: "ALTERNATE_MOBILE_NO",
+    type: "varchar",
+    length: 10,
+    default: null,
+  })
+  alternateMobileNo: string;
+
   @Column({ name: "GENDER", type: "varchar", length: 6, default: null })
   gender: string;
 

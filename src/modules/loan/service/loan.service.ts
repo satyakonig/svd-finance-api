@@ -124,6 +124,7 @@ export class LoanService {
           "customer.label AS label",
           "customer.name AS name",
           "customer.mobileNo AS mobileno",
+          "customer.alternateMobileNo AS alternatemobileno",
           "area.name AS areaname",
           "agent.name AS agentname",
           "payment.amount AS todayamount",

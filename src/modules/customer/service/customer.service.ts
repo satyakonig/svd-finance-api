@@ -10,7 +10,7 @@ export class CustomerService {
   constructor(
     @InjectRepository(CustomerEntity)
     private customerRepo: Repository<CustomerEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
 
   async getCustomer(id: number) {
@@ -35,7 +35,7 @@ export class CustomerService {
     locationId: any,
     phaseId: any,
     pageIndex: number = 0,
-    pageSize: number = 10
+    pageSize: number = 10,
   ) {
     try {
       const skip = Number(pageIndex) * Number(pageSize);
@@ -48,6 +48,7 @@ export class CustomerService {
           "customer.label AS label",
           "customer.gender AS gender",
           "customer.mobileNo AS mobileno",
+          "customer.alternateMobileNo AS alternatemobileno",
           "customer.name AS name",
           "customer.status AS status",
           "area.name AS areaname",
@@ -89,7 +90,7 @@ export class CustomerService {
 
       let savedCustomer = await queryRunner.manager.save(
         CustomerEntity,
-        customer
+        customer,
       );
 
       const savedCustomerWithRelations = await queryRunner.manager
@@ -99,10 +100,12 @@ export class CustomerService {
           "customer.label AS label",
           "customer.gender AS gender",
           "customer.mobileNo AS mobileno",
+          "customer.mobileNo AS mobileno",
+          "customer.alternateMobileNo AS alternatemobileno",
           "customer.name AS name",
           "customer.status AS status",
           "area.name AS areaname",
-          "agent.name AS agentName",
+          "agent.name AS agentname",
           "agentLocation.id AS agentlocationid",
         ])
         .leftJoin("customer.area", "area")
@@ -122,7 +125,7 @@ export class CustomerService {
         successMessage: reponseGenerator(
           "Customer",
           payload?.customer?.id,
-          payload?.customer?.status
+          payload?.customer?.status,
         ),
         result: savedCustomerWithRelations,
       };
@@ -144,7 +147,7 @@ export class CustomerService {
         .leftJoin("agentLocation.phase", "phase")
         .select(
           "COALESCE(MAX(CAST(customer.label AS INTEGER)), 0) + 1",
-          "count"
+          "count",
         )
         .where("location.id = :locationId", { locationId })
         .andWhere("phase.id = :phaseId", { phaseId })
