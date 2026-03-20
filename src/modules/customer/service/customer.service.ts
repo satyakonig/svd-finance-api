@@ -60,7 +60,9 @@ export class CustomerService {
         .leftJoin("agentLocation.agent", "agent")
         .leftJoin("agentLocation.location", "location")
         .leftJoin("agentLocation.phase", "phase")
-        .where(name ? "customer.name =:name" : "1=1", { name: `%${name}%` })
+        .where(name ? "customer.name ILIKE :name" : "1=1", {
+          name: `%${name}%`,
+        })
         .andWhere(mobileNo ? "customer.mobileNo =:mobileNo" : "1=1", {
           mobileNo,
         })

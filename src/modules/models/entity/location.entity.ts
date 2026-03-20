@@ -7,6 +7,9 @@ export class LocationEntity extends BaseEntity {
   @Column({ name: "NAME", type: "varchar", length: 50, default: null })
   name: string;
 
+  @Column({ name: "RESERVE_FUND", type: "varchar", default: 0 })
+  reserveFund: number;
+
   @OneToMany(() => AreaEntity, (area) => area.location)
   areaList: AreaEntity[];
 }

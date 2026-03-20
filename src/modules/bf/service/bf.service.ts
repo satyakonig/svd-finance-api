@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Equal, LessThan, Repository } from "typeorm";
+import { DataSource, Equal, LessThan, Repository } from "typeorm";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { BFDto } from "../../models/dto/bf.dto";
 import { LoanEntity } from "../../models/entity/loan.entity";
@@ -34,6 +34,7 @@ export class BFService {
     private locationRepo: Repository<LocationEntity>,
     @InjectRepository(ChitTransactionEntity)
     private chitTransactionRepo: Repository<ChitTransactionEntity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getBFList(
@@ -101,11 +102,57 @@ export class BFService {
   }
 
   public async saveOrUpdateBF(bf: BFDto) {
-    try {
-      let savedBF = await this.bfRepo.save(BFDto.toEntity(bf));
+    let queryRunner = this.dataSource.createQueryRunner();
 
-      let savedBfWithRelations = await this.bfRepo
-        .createQueryBuilder("bf")
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const prevBf = await queryRunner.manager.findOne(BFEntity, {
+        where: {
+          id: bf?.id,
+        },
+      });
+
+      let savedBF = await queryRunner.manager.save(BFEntity, bf);
+
+      let location = await queryRunner.manager.findOne(LocationEntity, {
+        where: {
+          id: bf?.agentLocation?.location?.id,
+        },
+      });
+
+      let updatedBalance = Number(location.reserveFund);
+
+      if (bf?.bfType === "Transfer & Carry Forward") {
+        if (prevBf?.id) {
+          updatedBalance = updatedBalance - Number(prevBf.transferedAmount);
+        }
+        updatedBalance = updatedBalance + Number(bf?.transferedAmount);
+      }
+      if (bf?.bfType === "Add & Carry Forward") {
+        if (prevBf?.id) {
+          updatedBalance = updatedBalance + Number(prevBf.addedAmount);
+        }
+        updatedBalance = updatedBalance - Number(bf?.addedAmount);
+      }
+      if (bf?.bfType === "Add & Transfer & Carry Forward") {
+        if (prevBf?.id) {
+          updatedBalance = updatedBalance - Number(prevBf.transferedAmount);
+          updatedBalance = updatedBalance + Number(prevBf.addedAmount);
+        }
+        updatedBalance = updatedBalance + Number(bf?.transferedAmount);
+        updatedBalance = updatedBalance - Number(bf?.addedAmount);
+      }
+
+      location.reserveFund = updatedBalance;
+
+      await queryRunner.manager.save(LocationEntity, location);
+
+      await queryRunner.commitTransaction();
+
+      let savedBfWithRelations = await queryRunner.manager
+        .createQueryBuilder(BFEntity, "bf")
         .select([
           "bf.id AS id",
           "bf.status AS status",
@@ -142,7 +189,10 @@ export class BFService {
         result: savedBfWithRelations,
       };
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       throw new Error(`Failed to save or update BF Error: ${error?.message}`);
+    } finally {
+      await queryRunner.release();
     }
   }
 

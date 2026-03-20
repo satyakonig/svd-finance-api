@@ -1,6 +1,5 @@
 export const ROLES = {
   ADMIN: "ADMIN",
-  RECEPTION: "RECEPTION",
 };
 
 export const STATUS = {
@@ -20,6 +19,11 @@ export const PAYMENT_TYPES = {
   ONLINE: "ONLINE",
   CASH: "CASH",
   PARTIAL: "PARTIAL",
+};
+
+export const PARTNER_TRANSACTION_TYPES = {
+  INVESTMENT: "investment",
+  WITHDRAW: "withdraw",
 };
 
 export const MAX_AGENTS_LIMIT = 5;

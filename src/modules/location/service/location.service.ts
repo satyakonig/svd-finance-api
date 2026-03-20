@@ -19,7 +19,7 @@ export class LocationService {
     private loanDurationRepo: Repository<LoanDurationEntity>,
     @InjectRepository(AgentLocationEntity)
     private agentLocationRepo: Repository<AgentLocationEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
 
   async getLocation(id: number) {
@@ -40,22 +40,29 @@ export class LocationService {
     name: string,
     status: string,
     pageSize: number,
-    pageIndex: number
+    pageIndex: number,
   ) {
     try {
-      let result = await this.locationRepo.findAndCount({
-        where: {
-          name: name ? ILike(`%${name}%`) : undefined,
-          status: status ?? undefined,
-        },
-        order: {
-          name: "ASC",
-        },
-        skip: pageSize && pageIndex ? pageSize * pageIndex : undefined,
-        take: pageSize ?? undefined,
-      });
-      let list = result[0];
-      let count = result[1];
+      let query = this.locationRepo
+        .createQueryBuilder("location")
+        .select([
+          "location.id AS id",
+          "location.name AS name",
+          "location.status AS status",
+          "location.reserveFund AS reservefund",
+        ])
+        .where("location.status =:status", { status })
+        .andWhere(name ? "location.name ILIKE :name" : "1=1", {
+          name: `%${name}%`,
+        })
+        .orderBy("");
+
+      if (pageIndex != null && pageSize != null) {
+        query.offset(pageIndex * pageSize).limit(pageSize);
+      }
+
+      let list = await query.getRawMany();
+      let count = await query.getCount();
       return { list, count };
     } catch (err) {
       throw new Error(`Failed to get locations ${err.message}`);
@@ -75,16 +82,21 @@ export class LocationService {
         return { infoMessage: "Location already exists" };
       }
       let saveOrUpdatedLocation = await this.locationRepo.save(
-        LocationDto.toEntity(location)
+        LocationDto.toEntity(location),
       );
 
       return {
         successMessage: reponseGenerator(
           "Location",
           location?.id,
-          location?.status
+          location?.status,
         ),
-        result: saveOrUpdatedLocation,
+        result: {
+          id: saveOrUpdatedLocation.id,
+          name: saveOrUpdatedLocation.name,
+          status: saveOrUpdatedLocation.status,
+          reservefund: saveOrUpdatedLocation.reserveFund,
+        },
       };
     } catch (error) {
       throw new Error(`Failed to save location ${error.message}`);
@@ -119,28 +131,28 @@ export class LocationService {
         areas.map(async (area) => {
           area.status = location.status;
           await queryRunner.manager.save(AreaEntity, area);
-        })
+        }),
       );
 
       await Promise.all(
         loanDurations.map(async (loanDuration) => {
           loanDuration.status = location.status;
           await queryRunner.manager.save(LoanDurationEntity, loanDuration);
-        })
+        }),
       );
 
       await Promise.all(
         agentLocations.map(async (agentLocation) => {
           agentLocation.status = location.status;
           await queryRunner.manager.save(AgentLocationEntity, agentLocation);
-        })
+        }),
       );
 
       location.status = location.status;
 
       let restoredLocation = await queryRunner.manager.save(
         LocationEntity,
-        location
+        location,
       );
 
       await queryRunner.commitTransaction();
@@ -149,9 +161,14 @@ export class LocationService {
         successMessage: reponseGenerator(
           "Location",
           location?.id,
-          location?.status
+          location?.status,
         ),
-        result: restoredLocation,
+        result: {
+          id: restoredLocation.id,
+          name: restoredLocation.name,
+          status: restoredLocation.status,
+          reservefund: restoredLocation.reserveFund,
+        },
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();

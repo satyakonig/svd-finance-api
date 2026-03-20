@@ -396,7 +396,7 @@ export class LoanService {
     }
   }
 
-  public async getReport(date: any, phaseId: any, locationId: any) {
+  public async getExcelReport(date: any, phaseId: any, locationId: any) {
     const locationsList: LocationEntity[] = await this.locationRepo.find({
       where: {
         id: locationId ?? undefined,
@@ -408,68 +408,135 @@ export class LoanService {
       locationsList.map(async ({ id: locationId, name: locationName }) => {
         const collection = await this.loanPaymentRepo
           .createQueryBuilder("loanpayment")
-          .leftJoinAndSelect("loanpayment.loan", "loan")
-          .leftJoinAndSelect("loan.customer", "customer")
-          .leftJoinAndSelect("loanpayment.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "loan.balanceAmount AS payableAmount",
+            "loan.balanceAmount AS balanceamount",
+            "customer.label AS label",
+            "customer.name AS name",
+            "customer.mobileNo AS mobileno",
+            "customer.alternateMobileNo AS alternatemobileno",
+            "area.name AS areaname",
+            "agent.name AS agentname",
+            "phase.name AS name",
+            "location.name AS locationname",
+            "loanpayment.date AS date",
+            "loanpayment.amount AS paidamount",
+            "loanpayment.paymentMode AS paymentmode",
+            "loanpayment.receiverName AS receivername",
+          ])
+          .leftJoin("loanpayment.loan", "loan")
+          .leftJoin("loan.customer", "customer")
+          .leftJoin("loanpayment.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(date ? "loanpayment.date = :date" : "1=1", { date })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere("loanpayment.status = :status", { status: "ACTIVE" })
-          .getMany();
+          .getRawMany();
 
         const spent = await this.spentRepo
           .createQueryBuilder("spent")
-          .leftJoinAndSelect("spent.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "spent.expenseDescription AS expensedescription",
+            "spent.amount AS amount",
+            "agent.name AS agentname",
+            "location.name AS locationname",
+            "phase.name AS phasename",
+          ])
+          .leftJoin("spent.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere("spent.status = :status", { status: "ACTIVE" })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere(date ? "spent.date = :date" : "1=1", { date })
-          .getMany();
+          .getRawMany();
 
         const payments = await this.loanRepo
           .createQueryBuilder("loan")
-          .leftJoinAndSelect("loan.customer", "customer")
-          .leftJoinAndSelect("loan.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "loan.loanAmount AS loanamount",
+            "loan.payableAmount AS payableamount",
+            "loan.loanDate AS loandate",
+            "loan.repayDate AS repaydate",
+            "customer.label AS label",
+            "customer.name AS name",
+            "customer.mobileNo AS mobileno",
+            "customer.alternateMobileNo AS alternatemobileno",
+            "location.name AS locationname",
+            "phase.name AS phasename",
+            "agent.name AS agentname",
+          ])
+          .leftJoin("loan.customer", "customer")
+          .leftJoin("loan.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere(date ? "loan.loanDate = :date" : "1=1", { date })
           .andWhere("loan.status = :status", { status: "ACTIVE" })
-          .getMany();
+          .getRawMany();
 
         const bf = await this.bfRepo
           .createQueryBuilder("bf")
-          .leftJoinAndSelect("bf.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "bf.bfDate AS bfdate",
+            "bf.previousBf AS previousbf",
+            "bf.collectionTotal AS collectiontotal",
+            "bf.finesTotal AS finestotal",
+            "bf.paymentTotal AS paymenttotal",
+            "bf.spentTotal AS spenttotal",
+            "bf.interestTotal AS interesttotal",
+            "bf.rebateTotal AS rebatetotal",
+            "bf.bf AS bf",
+            "bf.finalBf AS finalbf",
+            "bf.addedAmount AS addedamount",
+            "bf.transferedAmount AS transferedamount",
+            "bf.bfType AS bftype",
+            "bf.addedFrom AS addedfrom",
+            "bf.transferedTo AS transferedto",
+            "bf.chitInstallment AS chitinstallment",
+            "bf.chitWithdraw AS chitwithdraw",
+            "agent.name AS agentname",
+            "location.name AS locationname",
+            "phase.name AS phasename",
+          ])
+          .leftJoin("bf.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere(date ? "bf.bfDate = :date" : "1=1", { date })
           .andWhere("bf.status = :status", { status: "ACTIVE" })
-          .getMany();
+          .getRawMany();
 
         const fines = await this.fineRepo
           .createQueryBuilder("fine")
-          .leftJoinAndSelect("fine.loan", "loan")
-          .leftJoinAndSelect("loan.customer", "customer")
-          .leftJoinAndSelect("fine.agentLocation", "agentLocation")
-          .leftJoinAndSelect("agentLocation.agent", "agent")
-          .leftJoinAndSelect("agentLocation.location", "location")
-          .leftJoinAndSelect("agentLocation.phase", "phase")
+          .select([
+            "fine.amount AS amount",
+            "fine.paymentMode AS paymentmode",
+            "fine.receiverName AS receivername",
+            "customer.name AS customername",
+            "agent.name AS agentname",
+            "location.name AS locationname",
+            "phase.name AS phasename",
+          ])
+          .leftJoin("fine.loan", "loan")
+          .leftJoin("loan.customer", "customer")
+          .leftJoin("fine.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.phase", "phase")
           .where("location.id = :locationId", { locationId })
           .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
           .andWhere(date ? "fine.date = :date" : "1=1", { date })
           .andWhere("fine.status = :status", { status: "ACTIVE" })
-          .getMany();
+          .getRawMany();
 
         return {
           id: locationId,

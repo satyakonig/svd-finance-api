@@ -64,13 +64,13 @@ export class LoanController {
     return this.loanService.saveLoan(payload);
   }
 
-  @Get("report")
-  public getReport(
+  @Get("excel")
+  public getExcelReport(
     @Query("date") date: any,
     @Query("phaseId") phaseId: any,
     @Query("locationId") locationId: any,
   ) {
-    return this.loanService.getReport(date, phaseId, locationId);
+    return this.loanService.getExcelReport(date, phaseId, locationId);
   }
 
   @Get("amount/report")

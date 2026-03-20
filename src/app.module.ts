@@ -21,6 +21,7 @@ import { PhaseModule } from "./modules/phase/phase.module";
 import { FineModule } from "./modules/fine/fine.module";
 import { ChitTransactionModule } from "./modules/chit/chit.transaction.module";
 import { RebateModule } from "./modules/rebate/rebate.module";
+import { PartnerTransactionModule } from "./modules/partner/partner.transaction.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { RebateModule } from "./modules/rebate/rebate.module";
     FineModule,
     ChitTransactionModule,
     RebateModule,
+    PartnerTransactionModule,
   ],
   controllers: [AppController],
   providers: [

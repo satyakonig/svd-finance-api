@@ -4,6 +4,7 @@ import { BaseDto } from "./base.dto";
 
 export class LocationDto extends BaseDto {
   name: string;
+  reserveFund: number;
   areaList: AreaDto[];
 
   public static fromEntity(locationEntity: LocationEntity): LocationDto {
