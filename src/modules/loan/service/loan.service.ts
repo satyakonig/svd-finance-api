@@ -11,6 +11,7 @@ import { LocationEntity } from "../../models/entity/location.entity";
 import { BFEntity } from "../../models/entity/bf.entity";
 import { FineEntity } from "../../models/entity/fine.entity";
 import { error } from "console";
+import { RebateEntity } from "../../models/entity/rebate.entity";
 
 @Injectable()
 export class LoanService {
@@ -27,6 +28,8 @@ export class LoanService {
     private bfRepo: Repository<BFEntity>,
     @InjectRepository(FineEntity)
     private fineRepo: Repository<FineEntity>,
+    @InjectRepository(RebateEntity)
+    private rebateRepo: Repository<RebateEntity>,
   ) {}
 
   public async getLoan(
@@ -404,13 +407,21 @@ export class LoanService {
       },
     });
 
-    const reportList = await Promise.all(
+    const excelList = await Promise.all(
       locationsList.map(async ({ id: locationId, name: locationName }) => {
         const collection = await this.loanPaymentRepo
           .createQueryBuilder("loanpayment")
           .select([
-            "loan.balanceAmount AS payableAmount",
-            "loan.balanceAmount AS balanceamount",
+            "loan.payableAmount AS payableamount",
+            // ⭐ Calculated balance from payments
+            `loan.payableAmount -
+                (
+                    SELECT COALESCE(SUM(lp2."AMOUNT"), 0)
+                    FROM loan_payment_trn_tbl lp2
+                    WHERE lp2."LOAN_ID" = loan."ID"
+                    AND lp2."PAYMENT_DATE" <= :date
+                    AND lp2."STATUS" = 'ACTIVE'
+                 ) AS balanceamount`,
             "customer.label AS label",
             "customer.name AS name",
             "customer.mobileNo AS mobileno",
@@ -426,6 +437,7 @@ export class LoanService {
           ])
           .leftJoin("loanpayment.loan", "loan")
           .leftJoin("loan.customer", "customer")
+          .leftJoin("customer.area", "area")
           .leftJoin("loanpayment.agentLocation", "agentLocation")
           .leftJoin("agentLocation.location", "location")
           .leftJoin("agentLocation.agent", "agent")
@@ -467,10 +479,12 @@ export class LoanService {
             "customer.mobileNo AS mobileno",
             "customer.alternateMobileNo AS alternatemobileno",
             "location.name AS locationname",
+            "area.name AS areaname",
             "phase.name AS phasename",
             "agent.name AS agentname",
           ])
           .leftJoin("loan.customer", "customer")
+          .leftJoin("customer.area", "area")
           .leftJoin("loan.agentLocation", "agentLocation")
           .leftJoin("agentLocation.agent", "agent")
           .leftJoin("agentLocation.location", "location")
@@ -524,10 +538,12 @@ export class LoanService {
             "customer.name AS customername",
             "agent.name AS agentname",
             "location.name AS locationname",
+            "area.name AS areaname",
             "phase.name AS phasename",
           ])
           .leftJoin("fine.loan", "loan")
           .leftJoin("loan.customer", "customer")
+          .leftJoin("customer.area", "area")
           .leftJoin("fine.agentLocation", "agentLocation")
           .leftJoin("agentLocation.agent", "agent")
           .leftJoin("agentLocation.location", "location")
@@ -538,6 +554,36 @@ export class LoanService {
           .andWhere("fine.status = :status", { status: "ACTIVE" })
           .getRawMany();
 
+        const rebates = await this.rebateRepo
+          .createQueryBuilder("rebate")
+          .select([
+            "loan.loanAmount AS loanamount",
+            "loan.payableAmount AS payableamount",
+            "loan.loanDate AS loandate",
+            "loan.repayDate AS repaydate",
+            "customer.label AS label",
+            "customer.mobileNo AS mobileno",
+            "customer.alternateMobileNo AS alternatemobileno",
+            "rebate.amount AS amount",
+            "customer.name AS customername",
+            "agent.name AS agentname",
+            "location.name AS locationname",
+            "area.name AS areaname",
+            "phase.name AS phasename",
+          ])
+          .leftJoin("rebate.loan", "loan")
+          .leftJoin("loan.customer", "customer")
+          .leftJoin("customer.area", "area")
+          .leftJoin("rebate.agentLocation", "agentLocation")
+          .leftJoin("agentLocation.agent", "agent")
+          .leftJoin("agentLocation.location", "location")
+          .leftJoin("agentLocation.phase", "phase")
+          .where("location.id = :locationId", { locationId })
+          .andWhere(phaseId ? "phase.id = :phaseId" : "1=1", { phaseId })
+          .andWhere(date ? "rebate.date = :date" : "1=1", { date })
+          .andWhere("rebate.status = :status", { status: "ACTIVE" })
+          .getRawMany();
+
         return {
           id: locationId,
           name: locationName,
@@ -545,12 +591,13 @@ export class LoanService {
           payments,
           spent,
           fines,
+          rebates,
           bf,
         };
       }),
     );
 
-    return reportList;
+    return excelList;
   }
 
   public async getTotalAmountReport(date: any, phaseId: any, locationId: any) {
