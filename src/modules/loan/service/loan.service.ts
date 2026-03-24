@@ -428,7 +428,7 @@ export class LoanService {
             "customer.alternateMobileNo AS alternatemobileno",
             "area.name AS areaname",
             "agent.name AS agentname",
-            "phase.name AS name",
+            "phase.name AS phasename",
             "location.name AS locationname",
             "loanpayment.date AS date",
             "loanpayment.amount AS paidamount",
