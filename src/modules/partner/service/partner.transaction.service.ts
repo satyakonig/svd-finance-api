@@ -103,18 +103,20 @@ export class PartnerTransactionService {
 
       let updatedBalance = Number(location.reserveFund);
 
+      if (
+        prevPartnerTransaction?.type === PARTNER_TRANSACTION_TYPES.INVESTMENT
+      ) {
+        updatedBalance = updatedBalance - Number(prevPartnerTransaction.amount);
+      }
+
+      if (prevPartnerTransaction?.type === PARTNER_TRANSACTION_TYPES.WITHDRAW) {
+        updatedBalance = updatedBalance + Number(prevPartnerTransaction.amount);
+      }
+
       if (partnerTransaction?.type === PARTNER_TRANSACTION_TYPES.INVESTMENT) {
-        if (prevPartnerTransaction?.id) {
-          updatedBalance =
-            updatedBalance - Number(prevPartnerTransaction.amount);
-        }
         updatedBalance = updatedBalance + Number(partnerTransaction?.amount);
       }
       if (partnerTransaction?.type === PARTNER_TRANSACTION_TYPES.WITHDRAW) {
-        if (prevPartnerTransaction?.id) {
-          updatedBalance =
-            updatedBalance + Number(prevPartnerTransaction.amount);
-        }
         updatedBalance = updatedBalance - Number(partnerTransaction?.amount);
       }
 

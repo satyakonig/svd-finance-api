@@ -124,25 +124,33 @@ export class BFService {
 
       let updatedBalance = Number(location.reserveFund);
 
+      if (prevBf?.bfType === "Transfer & Carry Forward") {
+        updatedBalance = updatedBalance - Number(prevBf.transferedAmount);
+      }
+
+      if (prevBf?.bfType === "Add & Carry Forward") {
+        updatedBalance = updatedBalance + Number(prevBf.addedAmount);
+      }
+
+      if (prevBf?.bfType === "Add & Transfer & Carry Forward") {
+        updatedBalance =
+          updatedBalance -
+          Number(prevBf.transferedAmount) +
+          Number(prevBf.addedAmount);
+      }
+
       if (bf?.bfType === "Transfer & Carry Forward") {
-        if (prevBf?.id) {
-          updatedBalance = updatedBalance - Number(prevBf.transferedAmount);
-        }
         updatedBalance = updatedBalance + Number(bf?.transferedAmount);
       }
+
       if (bf?.bfType === "Add & Carry Forward") {
-        if (prevBf?.id) {
-          updatedBalance = updatedBalance + Number(prevBf.addedAmount);
-        }
         updatedBalance = updatedBalance - Number(bf?.addedAmount);
       }
       if (bf?.bfType === "Add & Transfer & Carry Forward") {
-        if (prevBf?.id) {
-          updatedBalance = updatedBalance - Number(prevBf.transferedAmount);
-          updatedBalance = updatedBalance + Number(prevBf.addedAmount);
-        }
-        updatedBalance = updatedBalance + Number(bf?.transferedAmount);
-        updatedBalance = updatedBalance - Number(bf?.addedAmount);
+        updatedBalance =
+          updatedBalance +
+          Number(bf?.transferedAmount) -
+          Number(bf?.addedAmount);
       }
 
       location.reserveFund = updatedBalance;
