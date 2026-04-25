@@ -17,6 +17,7 @@ import { FineEntity } from "./entity/fine.entity";
 import { ChitTransactionEntity } from "./entity/chit.transaction.entity";
 import { RebateEntity } from "./entity/rebate.entity";
 import { PartnerTransactionEntity } from "./entity/partner.transaction.entity";
+import { InLineEntity } from "./entity/inline.entity";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PartnerTransactionEntity } from "./entity/partner.transaction.entity";
       ChitTransactionEntity,
       RebateEntity,
       PartnerTransactionEntity,
+      InLineEntity,
     ]),
   ],
   exports: [TypeOrmModule],
