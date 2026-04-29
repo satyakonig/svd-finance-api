@@ -701,6 +701,7 @@ export class LoanService {
           customer: {
             id: customerId,
           },
+          status: "ACTIVE",
         },
       });
       if (loan?.id) {
