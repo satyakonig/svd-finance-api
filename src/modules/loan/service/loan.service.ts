@@ -706,6 +706,8 @@ export class LoanService {
       });
       if (loan?.id) {
         return { exist: true };
+      } else {
+        return { exist: false };
       }
     } catch (err) {
       throw new Error(`Failed to check loan - ${err.message || err}`);
