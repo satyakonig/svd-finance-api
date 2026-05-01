@@ -108,11 +108,11 @@ export class BFService {
     await queryRunner.startTransaction();
 
     try {
-      const prevBf = await queryRunner.manager.findOne(BFEntity, {
-        where: {
-          id: bf?.id,
-        },
-      });
+      const prevBf = bf?.id
+        ? await queryRunner.manager.findOne(BFEntity, {
+            where: { id: bf.id },
+          })
+        : null;
 
       let savedBF = await queryRunner.manager.save(BFEntity, bf);
 
