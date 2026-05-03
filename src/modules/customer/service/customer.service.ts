@@ -34,6 +34,7 @@ export class CustomerService {
     status: any,
     locationId: any,
     phaseId: any,
+    label: any,
     pageIndex: number = 0,
     pageSize: number = 10,
   ) {
@@ -62,6 +63,9 @@ export class CustomerService {
         .leftJoin("agentLocation.phase", "phase")
         .where(name ? "customer.name ILIKE :name" : "1=1", {
           name: `%${name}%`,
+        })
+        .andWhere(label ? "customer.label ILIKE :label" : "1=1", {
+          label: `%${label}%`,
         })
         .andWhere(mobileNo ? "customer.mobileNo =:mobileNo" : "1=1", {
           mobileNo,

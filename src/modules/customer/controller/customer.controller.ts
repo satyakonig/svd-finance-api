@@ -19,8 +19,9 @@ export class CustomerController {
     @Query("status") status: any,
     @Query("locationId") locationId: any,
     @Query("phaseId") phaseId: any,
+    @Query("label") label: any,
     @Query("pageIndex") pageIndex: any,
-    @Query("pageSize") pageSize: any
+    @Query("pageSize") pageSize: any,
   ) {
     return this.customerService.getCustomerList(
       name,
@@ -28,8 +29,9 @@ export class CustomerController {
       status,
       locationId,
       phaseId,
+      label,
       pageIndex,
-      pageSize
+      pageSize,
     );
   }
 
@@ -41,7 +43,7 @@ export class CustomerController {
   @Get("generateSerialNo")
   public generateSerialNo(
     @Query("locationId") locationId: any,
-    @Query("phaseId") phaseId: any
+    @Query("phaseId") phaseId: any,
   ) {
     return this.customerService.generateSerialNo(locationId, phaseId);
   }
