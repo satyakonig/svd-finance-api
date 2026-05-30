@@ -171,7 +171,7 @@ export class InLineService {
         .leftJoin("agentLocation.agent", "agent")
         .leftJoin("agentLocation.location", "location")
         .leftJoin("agentLocation.phase", "phase")
-        .select("SUM(loan.loanAmount)", "payment")
+        .select("SUM(loan.payableAmount)", "payment")
         .where("location.id = :locationId", { locationId })
         .andWhere("loan.status = :status", { status: "ACTIVE" })
         .andWhere("loan.loanDate >= :start AND loan.loanDate < :end", {

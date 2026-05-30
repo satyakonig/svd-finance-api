@@ -355,23 +355,24 @@ export class BFService {
     const chitsCollect = Number(formattedChitsRow?.chitWithdraw ?? 0);
     const rebatesTotal = Number(rebateRow?.sum ?? 0);
 
+    const interestTotal = payableTotal - paymentTotal;
+
     // --- 5. Final BF calculation ---
     const bf =
       prevBf +
       finesTotal +
       collectionTotal -
       spentTotal -
-      paymentTotal +
+      payableTotal +
+      interestTotal +
       chitsCollect -
       chitsPay;
-
-    const interestTotal = payableTotal - paymentTotal;
 
     // --- 6. Return ---
     const resultPayload = {
       previousBf: prevBf,
       collectionTotal,
-      paymentTotal,
+      paymentTotal: payableTotal,
       spentTotal,
       finesTotal,
       interestTotal,
