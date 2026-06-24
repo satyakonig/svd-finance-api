@@ -366,7 +366,8 @@ export class BFService {
       payableTotal +
       interestTotal +
       chitsCollect -
-      chitsPay;
+      chitsPay -
+      rebatesTotal;
 
     // --- 6. Return ---
     const resultPayload = {
