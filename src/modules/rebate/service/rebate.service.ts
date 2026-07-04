@@ -43,19 +43,15 @@ export class RebateService {
         },
       });
 
-      let updatedBalance = loan.balanceAmount;
       let updatedRebateBalance = loan.amountRebate;
 
       if (prevPayment) {
         // revert old payment and apply new payment
         updatedRebateBalance -= prevPayment.amount;
-        updatedBalance += prevPayment.amount;
       }
 
-      updatedBalance -= Number(amount);
       updatedRebateBalance += Number(amount);
       loan.amountRebate = updatedRebateBalance;
-      loan.balanceAmount = updatedBalance;
 
       await queryRunner.manager.save(LoanEntity, loan);
 

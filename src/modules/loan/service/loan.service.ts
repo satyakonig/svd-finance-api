@@ -675,6 +675,8 @@ export class LoanService {
           "loanDuration.durationType AS loandurationtype",
           "agent.name AS agentname",
           "loan.payableAmount AS payableamount",
+          "loan.amountRebate AS amountRebate",
+          "loan.loanAmount AS loanAmount",
         ])
         .leftJoin("loan.agentLocation", "agentLocation")
         .leftJoin("agentLocation.location", "location")
