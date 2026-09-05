@@ -50,6 +50,14 @@ export class LoanService {
         .leftJoinAndSelect("agentLocation.phase", "phase")
         .leftJoinAndSelect("loan.customer", "customer")
         .leftJoinAndSelect("customer.area", "area")
+        .addSelect(
+          `(loan.payableAmount - COALESCE((SELECT SUM(p."AMOUNT") FROM loan_payment_trn_tbl p WHERE p."LOAN_ID" = loan."ID"), 0))`,
+          "loan_balanceAmount", // TypeORM mapping convention: alias prefixed with entity name
+        )
+        .addSelect(
+          `COALESCE((SELECT SUM(r."AMOUNT") FROM rebate_trn_tbl r WHERE r."LOAN_ID" = loan."ID"), 0)`,
+          "loan_rebateAmount", // TypeORM mapping convention: alias prefixed with entity name
+        )
         .where(id ? "loan.id = :id" : "1=1", { id })
         .andWhere(status ? "loan.status = :status" : "1=1", { status })
         .andWhere(customerId ? "customer.id = :customerId" : "1=1", {
@@ -80,8 +88,19 @@ export class LoanService {
           .addOrderBy("rebates.date", "DESC");
       }
 
-      let loan = await query.getOne();
-      return loan ?? {};
+      const { raw, entities } = await query.getRawAndEntities();
+
+      if (!entities.length) {
+        return {};
+      }
+
+      const loan = entities[0];
+
+      return {
+        ...loan,
+        balanceAmount: Number(raw[0].loan_balanceAmount),
+        amountRebate: Number(raw[0].loan_rebateAmount),
+      };
     } catch (err) {
       throw new Error(`Failed to fetch loan - ${err.message || err}`);
     }
@@ -112,6 +131,10 @@ export class LoanService {
         throw new Error("date is required when paymentStatus is applied");
       }
 
+      // Dynamic SQL string to compute total payments per loan
+      const totalPaymentsSubQuery = `(SELECT COALESCE(SUM(p_sub."AMOUNT"), 0) FROM loan_payment_trn_tbl p_sub WHERE p_sub."LOAN_ID" = loan."ID" AND DATE(p_sub."PAYMENT_DATE") <= '${date}')`;
+      const balanceAmountSubQuery = `(loan."PAYABLE_AMOUNT" - ${totalPaymentsSubQuery})`;
+
       /* ======================================================
        LIST QUERY
     ====================================================== */
@@ -123,7 +146,7 @@ export class LoanService {
           "loan.status AS status",
           "loan.loanDate AS loanDate",
           "loan.payableAmount AS payableamount",
-          "loan.balanceAmount AS balanceAmount",
+          `${balanceAmountSubQuery} AS balanceamount`, // Computed dynamically
           "customer.label AS label",
           "customer.name AS name",
           "customer.mobileNo AS mobileno",
@@ -157,13 +180,13 @@ export class LoanService {
       if (paymentStatus === "paid") {
         query.andWhere(
           `
-        EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-            AND p."AMOUNT" != 0
-        )
-        `,
+      EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+          AND p."AMOUNT" != 0
+      )
+      `,
           { date },
         );
       }
@@ -171,12 +194,12 @@ export class LoanService {
       if (paymentStatus === "pending") {
         query.andWhere(
           `
-        NOT EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-        )
-        `,
+      NOT EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+      )
+      `,
           { date },
         );
         query.andWhere("loan.loanDate != :date", { date });
@@ -185,13 +208,13 @@ export class LoanService {
       if (paymentStatus === "unpaid") {
         query.andWhere(
           `
-        EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-            AND p."AMOUNT" = 0
-        )
-        `,
+      EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+          AND p."AMOUNT" = 0
+      )
+      `,
           { date },
         );
       }
@@ -201,32 +224,33 @@ export class LoanService {
       }
 
       if (paymentStatus === "closed") {
-        query.andWhere("loan.balanceAmount = 0");
+        // loan.payableAmount - totalPayments === 0 (or loan.payableAmount <= totalPayments)
+        query.andWhere(`${balanceAmountSubQuery} <= 0`);
       }
 
       if (paymentStatus === "overdue") {
         query.andWhere(
           `
+      (
         (
+          (loan.payableAmount / NULLIF(loanDuration.durationValue, 0))
+          *
           (
-            (loan.payableAmount / NULLIF(loanDuration.durationValue, 0))
-            *
-            (
-              FLOOR(
-                EXTRACT(EPOCH FROM AGE(CAST(:date AS date), loan.loanDate)) /
-                CASE 
-                  WHEN loanDuration.durationType = 'days' THEN 86400
-                  WHEN loanDuration.durationType = 'weeks' THEN 7 * 86400
-                  WHEN loanDuration.durationType = 'months' THEN 30 * 86400
-                  WHEN loanDuration.durationType = 'years' THEN 365 * 86400
-                END
-              ) - 1
-            )
+            FLOOR(
+              EXTRACT(EPOCH FROM AGE(CAST(:date AS date), loan.loanDate)) /
+              CASE 
+                WHEN loanDuration.durationType = 'days' THEN 86400
+                WHEN loanDuration.durationType = 'weeks' THEN 7 * 86400
+                WHEN loanDuration.durationType = 'months' THEN 30 * 86400
+                WHEN loanDuration.durationType = 'years' THEN 365 * 86400
+              END
+            ) - 1
           )
-          >
-          (loan.payableAmount - loan.balanceAmount)
         )
-        `,
+        >
+        ${totalPaymentsSubQuery}
+      )
+      `,
           { date },
         );
       }
@@ -309,13 +333,13 @@ export class LoanService {
       if (paymentStatus === "paid") {
         countQuery.andWhere(
           `
-        EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-            AND p."AMOUNT" != 0
-        )
-        `,
+      EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+          AND p."AMOUNT" != 0
+      )
+      `,
           { date },
         );
       }
@@ -323,12 +347,12 @@ export class LoanService {
       if (paymentStatus === "pending") {
         countQuery.andWhere(
           `
-        NOT EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-        )
-        `,
+      NOT EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+      )
+      `,
           { date },
         );
         countQuery.andWhere("loan.loanDate != :date", { date });
@@ -337,13 +361,13 @@ export class LoanService {
       if (paymentStatus === "unpaid") {
         countQuery.andWhere(
           `
-        EXISTS (
-          SELECT 1 FROM loan_payment_trn_tbl p
-          WHERE p."LOAN_ID" = loan."ID"
-            AND DATE(p."PAYMENT_DATE") = :date
-            AND p."AMOUNT" = 0
-        )
-        `,
+      EXISTS (
+        SELECT 1 FROM loan_payment_trn_tbl p
+        WHERE p."LOAN_ID" = loan."ID"
+          AND DATE(p."PAYMENT_DATE") = :date
+          AND p."AMOUNT" = 0
+      )
+      `,
           { date },
         );
       }
@@ -353,37 +377,38 @@ export class LoanService {
       }
 
       if (paymentStatus === "closed") {
-        countQuery.andWhere("loan.balanceAmount = 0");
+        countQuery.andWhere(`${balanceAmountSubQuery} <= 0`);
       }
 
       if (paymentStatus === "overdue") {
         countQuery.andWhere(
           `
+      (
         (
+          (loan.payableAmount / NULLIF(loanDuration.durationValue, 0))
+          *
           (
-            (loan.payableAmount / NULLIF(loanDuration.durationValue, 0))
-            *
-            (
-              FLOOR(
-                EXTRACT(EPOCH FROM AGE(CAST(:date AS date), loan.loanDate)) /
-                CASE 
-                  WHEN loanDuration.durationType = 'days' THEN 86400
-                  WHEN loanDuration.durationType = 'weeks' THEN 7 * 86400
-                  WHEN loanDuration.durationType = 'months' THEN 30 * 86400
-                  WHEN loanDuration.durationType = 'years' THEN 365 * 86400
-                END
-              ) - 1
-            )
+            FLOOR(
+              EXTRACT(EPOCH FROM AGE(CAST(:date AS date), loan.loanDate)) /
+              CASE 
+                WHEN loanDuration.durationType = 'days' THEN 86400
+                WHEN loanDuration.durationType = 'weeks' THEN 7 * 86400
+                WHEN loanDuration.durationType = 'months' THEN 30 * 86400
+                WHEN loanDuration.durationType = 'years' THEN 365 * 86400
+              END
+            ) - 1
           )
-          >
-          (loan.payableAmount - loan.balanceAmount)
         )
-        `,
+        >
+        ${totalPaymentsSubQuery}
+      )
+      `,
           { date },
         );
       }
 
-      const { count } = await countQuery.getRawOne();
+      const result = await countQuery.getRawOne();
+      const count = result ? parseInt(result.count, 10) : 0;
 
       return { list, count };
     } catch (err) {
@@ -675,8 +700,9 @@ export class LoanService {
           "loanDuration.durationType AS loandurationtype",
           "agent.name AS agentname",
           "loan.payableAmount AS payableamount",
-          "loan.amountRebate AS amountRebate",
+          `COALESCE((SELECT SUM(p."AMOUNT") FROM rebate_trn_tbl p WHERE p."LOAN_ID" = loan."ID"), 0) AS amountrebate`,
           "loan.loanAmount AS loanAmount",
+          // `(loan.payableAmount - COALESCE((SELECT SUM(p."AMOUNT") FROM loan_payment_trn_tbl p WHERE p."LOAN_ID" = loan."ID"), 0)) AS balanceamount`
         ])
         .leftJoin("loan.agentLocation", "agentLocation")
         .leftJoin("agentLocation.location", "location")

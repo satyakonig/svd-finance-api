@@ -30,16 +30,6 @@ export class LoanPaymentService {
         },
       });
 
-      let updatedBalance = loan.balanceAmount;
-
-      if (prevPayment) {
-        // revert old payment and apply new payment
-        updatedBalance += prevPayment.amount;
-      }
-
-      updatedBalance -= Number(amount);
-      loan.balanceAmount = updatedBalance;
-
       await queryRunner.manager.save(LoanEntity, loan);
 
       const savedPayment = await queryRunner.manager.save(

@@ -10,8 +10,6 @@ import { LoanDurationDto } from "./loanDuration.dto";
 export class LoanDto extends BaseDto {
   loanAmount: number;
   payableAmount: number;
-  balanceAmount: number;
-  amountRebate: number;
   loanDate: Date;
   repayDate: Date;
   loanDuration: LoanDurationDto;

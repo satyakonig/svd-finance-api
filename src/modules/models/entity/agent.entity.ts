@@ -16,7 +16,7 @@ export class AgentEntity extends BaseEntity {
   @Column({ name: "USER_NAME", type: "varchar", length: 20, default: null })
   username: string;
 
-  @Column({ name: "USER_PSWD", type: "varchar", length: 20, default: null })
+  @Column({ name: "USER_PSWD", type: "varchar", length: 100, default: null })
   password: string;
 
   @Column({ name: "ROLE_NAME", type: "varchar", length: 10, default: null })

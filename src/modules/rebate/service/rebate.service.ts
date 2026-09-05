@@ -34,30 +34,9 @@ export class RebateService {
     await queryRunner.startTransaction();
 
     try {
-      const { loan, amount, date } = rebatePayment;
-
-      const prevPayment = await queryRunner.manager.findOne(RebateEntity, {
-        where: {
-          date,
-          loan: { id: loan.id },
-        },
-      });
-
-      let updatedRebateBalance = loan.amountRebate;
-
-      if (prevPayment) {
-        // revert old payment and apply new payment
-        updatedRebateBalance -= prevPayment.amount;
-      }
-
-      updatedRebateBalance += Number(amount);
-      loan.amountRebate = updatedRebateBalance;
-
-      await queryRunner.manager.save(LoanEntity, loan);
-
       const savedPayment = await queryRunner.manager.save(
         RebateEntity,
-        prevPayment ? { ...prevPayment, ...rebatePayment } : rebatePayment,
+        rebatePayment,
       );
 
       await queryRunner.commitTransaction();

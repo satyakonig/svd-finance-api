@@ -13,8 +13,7 @@ export class AgentService {
     @InjectRepository(AgentEntity)
     private agentRepo: Repository<AgentEntity>,
     @InjectRepository(AgentLocationEntity)
-    private agentLocationRepo: Repository<AgentLocationEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
 
   async validateUserName(username: string) {
@@ -36,7 +35,7 @@ export class AgentService {
           "agent.agentLocation",
           "agentLocation",
           "agentLocation.status = :status",
-          { status: "ACTIVE" }
+          { status: "ACTIVE" },
         )
         .leftJoinAndSelect("agentLocation.location", "location")
         .leftJoinAndSelect("agentLocation.day", "day")
@@ -56,7 +55,7 @@ export class AgentService {
     location: any,
     role: any,
     pageSize: number,
-    pageIndex: number
+    pageIndex: number,
   ) {
     try {
       let query = await this.agentRepo
@@ -65,7 +64,7 @@ export class AgentService {
           "agent.agentLocation",
           "agentLocation",
           "agentLocation.status = :status",
-          { status: "ACTIVE" }
+          { status: "ACTIVE" },
         )
         .leftJoinAndSelect("agentLocation.location", "location")
         .leftJoinAndSelect("agentLocation.day", "day")
@@ -111,11 +110,15 @@ export class AgentService {
         return { infoMessage: "Limit Exceeded, Increase your plan" };
       }
 
-      savedAgent = await queryRunner.manager.save(AgentEntity, agentPayload);
+      const bycrypt = require("bcrypt");
 
-      // Get all admins once (outside loop would be even better)
-      const adminList = await this.agentRepo.find({
-        where: { role: "ADMIN" },
+      const plainPassword = agentPayload.password;
+
+      const hashedPassword = await bycrypt.hash(plainPassword, 10);
+
+      savedAgent = await queryRunner.manager.save(AgentEntity, {
+        ...agentPayload,
+        password: hashedPassword,
       });
 
       await Promise.all(
@@ -125,28 +128,7 @@ export class AgentService {
             ...loc,
             agent: savedAgent,
           });
-
-          await Promise.all(
-            adminList.map(async (admin) => {
-              const existing = await this.agentLocationRepo.findOne({
-                where: {
-                  agent: { id: admin.id },
-                  location: { id: loc.location.id },
-                  phase: { id: loc.phase.id },
-                },
-              });
-
-              if (!existing) {
-                // Create a NEW object — DO NOT reuse loc
-                let { id, status, createdOn, supportPerson, ...locRest } = loc;
-                await queryRunner.manager.save(AgentLocationEntity, {
-                  ...locRest,
-                  agent: admin,
-                });
-              }
-            })
-          );
-        })
+        }),
       );
 
       await queryRunner.commitTransaction();
@@ -157,7 +139,7 @@ export class AgentService {
           "agent.agentLocation",
           "agentLocation",
           "agentLocation.status = :status",
-          { status: "ACTIVE" }
+          { status: "ACTIVE" },
         )
         .leftJoinAndSelect("agentLocation.location", "location")
         .leftJoinAndSelect("agentLocation.day", "day")

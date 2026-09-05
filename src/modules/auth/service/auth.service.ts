@@ -8,11 +8,12 @@ import { Repository } from "typeorm";
 export class AuthenticationService {
   constructor(
     private jwtService: JwtService,
-    @InjectRepository(AgentEntity) private userRepo: Repository<AgentEntity>
+    @InjectRepository(AgentEntity) private userRepo: Repository<AgentEntity>,
   ) {}
   private readonly logger = new Logger(AuthenticationService.name);
 
   async authenticateUser(payload: any): Promise<any> {
+    const bcrypt = require("bcrypt");
     this.logger.log("Authenticating user :", payload.username);
     const user = await this.userRepo
       .createQueryBuilder("agent")
@@ -20,7 +21,7 @@ export class AuthenticationService {
         "agent.agentLocation",
         "agentLocation",
         "agentLocation.status = :status",
-        { status: "ACTIVE" }
+        { status: "ACTIVE" },
       )
       .leftJoinAndSelect("agentLocation.location", "location")
       .leftJoinAndSelect("agentLocation.phase", "phase")
@@ -31,7 +32,14 @@ export class AuthenticationService {
     if (!user) {
       this.logger.error("User Not Found :", user);
       throw new HttpException("User Not Found", HttpStatus.UNAUTHORIZED);
-    } else if (!(payload.password === user.password)) {
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(
+      payload.password,
+      user.password,
+    );
+
+    if (!isPasswordCorrect) {
       this.logger.error("Provided Password is Incorrect");
       throw new HttpException("Invalid Credentials", HttpStatus.UNAUTHORIZED);
     }

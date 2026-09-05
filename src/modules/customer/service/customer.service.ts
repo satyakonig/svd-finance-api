@@ -124,22 +124,6 @@ export class CustomerService {
       if (loan) {
         loan.customer = savedCustomer;
 
-        if (loan.id) {
-          const totalPaidResult = await queryRunner.manager
-            .createQueryBuilder(LoanPaymentEntity, "payment")
-            .select("COALESCE(SUM(payment.amount), 0)", "totalPaid")
-            .where("payment.loan = :loanId", {
-              loanId: loan.id,
-            })
-            .getRawOne();
-
-          const totalPaid = Number(totalPaidResult.totalPaid);
-
-          loan.balanceAmount = Math.max(0, loan.payableAmount - totalPaid);
-        } else {
-          loan.balanceAmount = loan.payableAmount;
-        }
-
         await queryRunner.manager.save(LoanEntity, loan);
       }
 
